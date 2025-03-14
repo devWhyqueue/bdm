@@ -4,7 +4,7 @@ import logging as log, os, time, json, rel, websocket
 
 dataset = 'us_stocks_essential'
 tickers = ['AAPL']
-api_key = '' # insert your finazon api key here
+api_key = '846081aae6c7443181ab1109e3350cd22s' # insert your finazon api key here
 frequency = '1s'
 
 
