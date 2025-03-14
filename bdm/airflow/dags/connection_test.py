@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Dict
 
-from airflow.decorators import dag, task
+from airflow.decorators import task, dag
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from confluent_kafka import Producer, KafkaException
 

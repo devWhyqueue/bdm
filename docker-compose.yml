@@ -84,6 +84,23 @@ services:
         condition: service_completed_successfully
 
   # ----------------------------------------------------------------------
+  # Airflow task build services
+  # ----------------------------------------------------------------------
+
+  finazon_stream_btc_usdt:
+    image: finazon_stream
+    build:
+      context: ./bdm/ingestion/streaming/finazon
+      dockerfile: Dockerfile
+    container_name: finazon_stream_btc_usdt
+    command: [ "python", "websocket_client.py", "--topic", "btc_usdt", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
+    environment:
+      - KAFKA_ENDPOINT=kafka:9092
+      - FINAZON_API_KEY=${FINAZON_API_KEY}
+    depends_on:
+      - kafka
+
+  # ----------------------------------------------------------------------
   # Kafka services
   # ----------------------------------------------------------------------
   kafka:

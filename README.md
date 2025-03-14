@@ -33,7 +33,7 @@ poetry install
 To start the project, run:
 
 ```sh
-docker compose up
+docker compose -p bdm up -d --build
 ```
 
 Once the services are up, you can access:
