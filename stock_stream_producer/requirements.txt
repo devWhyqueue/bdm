@@ -1,0 +1,4 @@
+kafka-python==2.0.6
+requests==2.32.3
+rel==0.4.9.19
+websocket-client==1.8.0
