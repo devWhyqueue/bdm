@@ -31,7 +31,8 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-    - /var/run/docker.sock:/var/run/docker.sock  # Mount the Docker socket so that our containers can reach the deamon for local dockeroperator
+    - '//var/run/docker.sock:/var/run/docker.sock' # We will pass the Docker Deamon as a volume to allow the webserver containers start docker images. Ref: https://stackoverflow.com/q/51342810/7024760
+    - '/tmp:/tmp' # airflow bug: https://github.com/apache/airflow/issues/16803
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on

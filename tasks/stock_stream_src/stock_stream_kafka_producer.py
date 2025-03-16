@@ -3,10 +3,11 @@ from kafka.errors import KafkaError
 import logging as log, os, time, json, rel, websocket
 
 api_key = os.environ['API_KEY']
-tickers = os.environ['AAPL']
+tickers = [os.environ['TICKER']]
 frequency = os.environ['FREQUENCY']
 dataset = 'us_stocks_essential'
 
+kafa_endpoint = os.environ['KAFKA_ENDPOINT']
 
 def on_error(wsapp, error):
     print(f'Error: {error}')
@@ -34,7 +35,6 @@ def subscribe(wsapp, dataset, tickers):
 
 
 if __name__ == '__main__':
-    kafa_endpoint = os.environ['KAFKA_ENDPOINT']
     producer = KafkaProducer(bootstrap_servers=[kafa_endpoint])
 
     def on_message(wsapp, message):

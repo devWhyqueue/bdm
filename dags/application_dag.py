@@ -2,8 +2,8 @@
 import textwrap
 from datetime import datetime, timedelta
 
-# The DAG object; we'll need this to instantiate a DAG
 from airflow.models.dag import DAG
+from airflow.models import Variable
 
 # # Operators; we need this to operate!
 # from airflow.operators.bash import BashOperator
@@ -35,16 +35,15 @@ with DAG(
         image='stock_stream_kafka_producer_img',
         container_name='stock_stream_kafka_producer',
         api_version='auto',
-        auto_remove='never',
-        # docker_url='unix://var/run/docker.sock', # make sure to have in the settings of docker desktop the deamon exposed to this port
-        # network_mode='container:spark-master',
-        tty=True,
-        xcom_all=False,
-        mount_tmp_dir=True,
+        auto_remove='force',
+        command="python stock_stream_kafka_producer.py",
+        docker_url="unix://var/run/docker.sock",
+        network_mode="bdm_default", # must be the name of the docker network
         environment={
-          'API_KEY': '846081aae6c7443181ab1109e3350cd22s', # insert api key
+          'API_KEY': Variable.get('FINAZON_API_KEY'), # insert api key
           'FREQUENCY': '1s',
-          'TICKER': 'AAPL'
+          'TICKER': 'AAPL',
+          'KAFKA_ENDPOINT': 'kafka:9092'
         }
     )
     stock_stream_kafka_producer.doc_md = textwrap.dedent(
