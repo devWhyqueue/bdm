@@ -10,6 +10,3 @@ COPY . /app
 # Install dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
-
-# # Run producer.py when the container launches -> this should be started + orchestrated by airflow
-# CMD ["python", "stock_stream_producer/producer.py"]

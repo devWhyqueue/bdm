@@ -1,19 +1,14 @@
 
 import textwrap
-from datetime import datetime, timedelta
-
 from airflow.models.dag import DAG
 from airflow.models import Variable
-
-# # Operators; we need this to operate!
-# from airflow.operators.bash import BashOperator
-# The extra docker operator
+# We use the docker operator for avoiding dependencies at system level -> they stay at task level
+# Furthermore, it decouples the development of tasks and DAG
+# Ref: https://marclamberti.com/blog/how-to-use-dockeroperator-apache-airflow/
 from airflow.providers.docker.operators.docker import DockerOperator
 
 with DAG(
     "bi-system",
-    # These args will get passed on to each operator
-    # You can override them on a per-task basis during operator initialization
     default_args={
         "depends_on_past": False,
         "email": [""],
@@ -23,8 +18,7 @@ with DAG(
         # "retry_delay": timedelta(minutes=5),
     },
     description="DAG of the real-time BI System for BDM",
-    schedule=None, # only 
-    # start_date=datetime(2021, 1, 1), # skip because we want to trigger it manually
+    schedule=None, # we only trigger our system manually
     catchup=False,
     tags=["bi-system"],
 ) as dag:
@@ -40,7 +34,7 @@ with DAG(
         docker_url="unix://var/run/docker.sock",
         network_mode="bdm_default", # must be the name of the docker network
         environment={
-          'API_KEY': Variable.get('FINAZON_API_KEY'), # insert api key
+          'API_KEY': Variable.get('FINAZON_API_KEY'), # insert api key in .env
           'FREQUENCY': '1s',
           'TICKER': 'AAPL',
           'KAFKA_ENDPOINT': 'kafka:9092'
@@ -49,7 +43,7 @@ with DAG(
     stock_stream_kafka_producer.doc_md = textwrap.dedent(
         """\
     #### Task Documentation
-    This task executes the stock stream kafka producer python script in a separate container.
+    This task executes the stock stream kafka producer python script in a separate environment.
     """
     )
 
@@ -58,3 +52,4 @@ with DAG(
     """
 
     # space for dependency specifications
+    # WIP

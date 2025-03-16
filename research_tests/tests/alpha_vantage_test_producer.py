@@ -12,7 +12,7 @@ interval = 1
 function = 'TIME_SERIES_INTRADAY'
 equity = 'AAPL'
 
-api_key_alpha_vantage = 'Y0DWWNKN51VTS3V1' # insert your alpha vantage api key here
+api_key_alpha_vantage = '' # insert your alpha vantage api key here
 url_alpha_vantage = f'https://www.alphavantage.co/query?function={function}&symbol={equity}&interval={interval}min&apikey={api_key_alpha_vantage}'
 
 

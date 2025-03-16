@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# Changes in environment file with sensitive api keys
+.env
+
 # Distribution / packaging
 .Python
 build/
