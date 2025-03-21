@@ -12,8 +12,7 @@ x-airflow-environment: &airflow-common-env
   AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
   AIRFLOW_CONN_KAFKA_DEFAULT: 'kafka://kafka:9092'
   AIRFLOW_CONN_AWS_DEFAULT: 'aws://minioadmin:minioadmin@?endpoint_url=http%3A%2F%2Fminio%3A9000'
-  # PIP extras typically installed in the container
-  _PIP_ADDITIONAL_REQUIREMENTS: apache-airflow-providers-apache-kafka apache-airflow-providers-amazon
+  _PIP_ADDITIONAL_REQUIREMENTS: apache-airflow-providers-apache-kafka apache-airflow-providers-amazon apache-airflow-providers-docker
 
 # Health check for the webserver
 x-airflow-webserver-healthcheck: &airflow-webserver-healthcheck
@@ -38,10 +37,11 @@ x-airflow-common: &airflow-common
   environment:
     <<: *airflow-common-env
   volumes:
-    - ../airflow/dags:/opt/airflow/dags
+    - ../bdm/airflow/dags:/opt/airflow/dags
     - ./.airflow/logs:/opt/airflow/logs
     - ./.airflow/config:/opt/airflow/config
     - ./.airflow/plugins:/opt/airflow/plugins
+    - /var/run/docker.sock:/var/run/docker.sock
     - /tmp:/tmp
 
 services:
@@ -68,12 +68,8 @@ services:
 
   airflow-init-packages:
     <<: *airflow-common
-    entrypoint: /bin/bash
-    command: >
-      -c "
-      pip install apache-airflow-providers-apache-kafka apache-airflow-providers-amazon &&
-      exec /entrypoint airflow version
-      "
+    entrypoint: /entrypoint
+    command: airflow version
     depends_on:
       airflow-init-db:
         condition: service_completed_successfully
