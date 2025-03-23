@@ -4,11 +4,11 @@ import logging
 import os
 from typing import List, Dict, Any, Iterator
 
-import boto3
 import click
 import praw
-from botocore.client import Config
 from praw.reddit import Submission, Subreddit
+
+from bdm.ingestion.batch.utils import get_minio_client
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -80,25 +80,6 @@ def scrape_subreddit(subreddit_name: str, sort_by: str, time_filter: str, limit:
     except Exception as e:
         logger.error("Error scraping Reddit: %s", str(e))
         raise
-
-
-def get_minio_client() -> boto3.client:
-    """Initialize and return a MinIO S3 client."""
-    endpoint = os.environ.get('MINIO_ENDPOINT')
-    access_key = os.environ.get('MINIO_ACCESS_KEY')
-    secret_key = os.environ.get('MINIO_SECRET_KEY')
-
-    if not endpoint or not access_key or not secret_key:
-        raise ValueError("MinIO credentials not found in environment variables")
-
-    return boto3.client(
-        's3',
-        endpoint_url=endpoint,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        config=Config(signature_version='s3v4'),
-        region_name='us-east-1'
-    )
 
 
 def generate_filename(subreddit: str, prefix: str) -> str:
