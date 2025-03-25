@@ -100,6 +100,14 @@ services:
     depends_on:
       - kafka
 
+  reddit_bitcoin:
+    image: subreddit-scraper
+    build:
+      context: ./bdm/ingestion/batch/reddit
+      dockerfile: Dockerfile
+    container_name: reddit_bitcoin_scraper
+    command: [ "python", "websocket_client.py", "--help" ]
+
   # ----------------------------------------------------------------------
   # Kafka services
   # ----------------------------------------------------------------------
