@@ -148,6 +148,44 @@ services:
     depends_on:
       - minio
 
+  # ----------------------------------------------------------------------
+  # Flink services
+  # ----------------------------------------------------------------------
+  jobmanager:
+    extends:
+      file: ./architecture/flink.yml
+      service: jobmanager
+    depends_on:
+      - kafka
+      - minio
+
+  taskmanager:
+    extends:
+      file: ./architecture/flink.yml
+      service: taskmanager
+    depends_on:
+      - jobmanager
+      - kafka
+      - minio
+
+  bitcoin-aggregator:
+    build:
+      context: bdm/processing/streaming/bitcoin_aggregator
+      dockerfile: Dockerfile
+    container_name: bitcoin-aggregator
+    environment:
+      - KAFKA_ENDPOINT=kafka:9092
+      - KAFKA_TOPIC=btc_usdt
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=landing-zone
+    depends_on:
+      - jobmanager
+      - taskmanager
+      - kafka
+      - minio
+
   nginx:
     image: nginx:latest
     restart: always
@@ -158,7 +196,10 @@ services:
     depends_on:
       - airflow-webserver
       - kafka-ui
+      - jobmanager
 
 volumes:
   postgres-db-volume:
   minio-data:
+  flink-checkpoints:
+  flink-usrlib:
