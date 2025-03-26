@@ -15,6 +15,8 @@ x-airflow-environment: &airflow-common-env
   AIRFLOW_CONN_KAFKA_DEFAULT: 'kafka://kafka:9092'
   AIRFLOW_CONN_S3: 'aws://minioadmin:minioadmin@?host=http%3A%2F%2Fminio%3A9000'
   AIRFLOW_CONN_REDDIT_API: ${AIRFLOW_CONN_REDDIT_API}
+  # Variables
+  AIRFLOW_VAR_FINNHUB_API_KEY: ${FINNHUB_API_KEY}
 
 # Health check for the webserver
 x-airflow-webserver-healthcheck: &airflow-webserver-healthcheck

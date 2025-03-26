@@ -103,10 +103,18 @@ services:
   reddit_bitcoin:
     image: subreddit-scraper
     build:
-      context: ./bdm/ingestion/batch/reddit
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: bdm/ingestion/batch/reddit/Dockerfile
     container_name: reddit_bitcoin_scraper
-    command: [ "python", "websocket_client.py", "--help" ]
+    command: [ "python", "subreddit_scraper.py", "--help" ]
+
+  finnhub_bitcoin_news:
+    image: finnhub-news-scraper
+    build:
+      context: .
+      dockerfile: bdm/ingestion/batch/finnhub/Dockerfile
+    container_name: finnhub_bitcoin_news_scraper
+    command: [ "python", "news_scraper.py", "--help" ]
 
   # ----------------------------------------------------------------------
   # Kafka services
