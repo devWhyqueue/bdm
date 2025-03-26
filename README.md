@@ -12,6 +12,8 @@ Big data project for the BDM course at UPC.
 │   ├── ingestion/      
 │       ├── batch/      # Batch ingestion containers
 │       ├── streaming/  # Streaming ingestion containers
+│   ├── processing/     
+│       ├── streaming/  # Streaming processing containers
 ├── docker-compose.yml  # Main Docker Compose file
 |── .env                # Environment variables for the project
 ├── pyproject.toml      # Dependencies for local development
@@ -51,6 +53,7 @@ Once the services are up, you can access:
 
 - **Airflow UI**: [http://localhost/airflow](http://localhost/airflow)
 - **Kafka UI**: [http://localhost/kafka](http://localhost/kafka)
+- **Flink UI**: [http://localhost/flink](http://localhost/flink)
 - **MinIO UI**: [http://localhost:9001](http://localhost:9001)
 
 To stop the project, run:
