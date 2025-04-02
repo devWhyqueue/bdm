@@ -46,6 +46,8 @@ x-airflow-common: &airflow-common
     - ./.airflow/config:/opt/airflow/config
     - ./.airflow/plugins:/opt/airflow/plugins
     - /var/run/docker.sock:/var/run/docker.sock
+    # Include to ensure compatibility across different systems without requiring users to modfiy config
+    - //var/run/docker.sock:/var/run/docker.sock
     - /tmp:/tmp
 
 services:
