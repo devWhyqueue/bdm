@@ -2,3 +2,4 @@ praw==7.8.1
 boto3==1.37.18
 botocore==1.37.18
 click==8.1.8
+requests==2.32.3
