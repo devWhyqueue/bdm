@@ -4,9 +4,6 @@ Pytest configuration file for Finazon WebSocket client tests.
 from unittest import mock
 
 import pytest
-from flask.cli import load_dotenv
-
-load_dotenv()
 
 
 @pytest.fixture
@@ -65,7 +62,16 @@ def sample_market_data():
 def expected_processed_data():
     """Returns the expected processed market data."""
     return {
+        "data_source": "us_stocks_essential",
+        "provider": "finazon",
+        "channel": "bars",
+        "frequency": "1s",
+        "aggregation": "1m",
         "symbol": "AAPL",
         "timestamp": 1699540020,
-        "price": 220.06
+        "open_price": 220.06,
+        "high_price": 220.13,
+        "low_price": 219.92,
+        "close_price": 219.96,
+        "volume": 4572
     }
