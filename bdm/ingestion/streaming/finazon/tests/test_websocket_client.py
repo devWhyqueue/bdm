@@ -2,7 +2,6 @@
 Unit tests for Finazon WebSocket client functionality.
 """
 import json
-from math import isclose
 from unittest import mock
 
 import pytest
@@ -20,7 +19,8 @@ class TestFinazonMarketDataProducer:
     def producer(self, mock_kafka_producer):
         """Create a producer instance for testing."""
         return FinazonMarketDataProducer(
-            kafka_topic="test_topic",
+            price_ticks_topic="test_price_ticks",
+            volume_stream_topic="test_volume_stream",
             ticker_symbols=["AAPL", "MSFT"],
             data_source="us_stocks_essential"
         )
@@ -28,7 +28,8 @@ class TestFinazonMarketDataProducer:
     @staticmethod
     def test_init(producer, mock_kafka_producer):
         """Test initialization of the producer."""
-        assert producer.kafka_topic == "test_topic"
+        assert producer.price_ticks_topic == "test_price_ticks"
+        assert producer.volume_stream_topic == "test_volume_stream"
         assert producer.ticker_symbols == ["AAPL", "MSFT"]
         assert producer.data_source == "us_stocks_essential"
         assert producer.kafka_producer is mock_kafka_producer
@@ -61,10 +62,10 @@ class TestFinazonMarketDataProducer:
         assert FinazonMarketDataProducer._validate_market_data(partial_data) is False
 
     @pytest.mark.asyncio
-    async def test_send_interpolated_data(self, producer, sample_market_data, mock_sleep):
-        """Test interpolated data sending."""
+    async def test_send_interpolated_price_ticks(self, producer, sample_market_data, mock_sleep):
+        """Test interpolated price ticks sending."""
         # Call the method
-        await producer._send_interpolated_data(sample_market_data)
+        await producer._send_interpolated_price_ticks(sample_market_data)
 
         # Assert the data was sent to Kafka 90 times
         assert producer.kafka_producer.send.call_count == 90
@@ -74,17 +75,11 @@ class TestFinazonMarketDataProducer:
         first_message = json.loads(first_call_args[1].decode())
 
         # Topic should be correct
-        assert first_call_args[0] == "test_topic"
+        assert first_call_args[0] == "test_price_ticks"
 
         # Message should contain expected data
-        assert first_message["data_source"] == "us_stocks_essential"
         assert first_message["symbol"] == "AAPL"
         assert first_message["timestamp"] == 1699540020
-        assert isclose(first_message["high_price"], 220.13)
-        assert isclose(first_message["low_price"], 219.92)
-        assert first_message["volume"] == 4572
-
-        # First price should be close to open price
         assert abs(first_message["price"] - 220.06) < 0.01
 
         # Check last message to ensure interpolation reached close price
@@ -107,7 +102,7 @@ class TestFinazonMarketDataProducer:
 
         # Mock the validation and processing methods
         with mock.patch.object(FinazonMarketDataProducer, '_validate_market_data', return_value=True) as mock_validate, \
-                mock.patch.object(producer, '_send_interpolated_data') as mock_process:
+                mock.patch.object(producer, '_send_interpolated_price_ticks') as mock_process:
             await producer._handle_websocket_connection()
 
             # Assert the subscription was sent
@@ -138,7 +133,7 @@ class TestFinazonMarketDataProducer:
 
         # Mock the validation method to return False and the processing method
         with mock.patch.object(FinazonMarketDataProducer, '_validate_market_data', return_value=False) as mock_validate, \
-                mock.patch.object(producer, '_send_interpolated_data') as mock_process, \
+                mock.patch.object(producer, '_send_interpolated_price_ticks') as mock_process, \
                 mock.patch('logging.warning') as mock_logging:
             await producer._handle_websocket_connection()
 
@@ -196,23 +191,27 @@ class TestCommandLineInterface:
 
     @staticmethod
     def test_main():
-        """Test the main function."""
-        # Mock the FinazonMarketDataProducer class
         with mock.patch(
                 'bdm.ingestion.streaming.finazon.websocket_client.FinazonMarketDataProducer') as mock_producer_class:
-            # Configure the mock
             mock_producer = mock.Mock()
             mock_producer_class.return_value = mock_producer
-
-            # Call the main function
-            main.callback(topic="test_topic", tickers="AAPL,MSFT", dataset="us_stocks_essential")
-
-            # Assert the producer was created with correct parameters
-            mock_producer_class.assert_called_once_with(
-                "test_topic",
-                ["AAPL", "MSFT"],
-                "us_stocks_essential"
+            # Simulate Click CLI call using CliRunner
+            from click.testing import CliRunner
+            runner = CliRunner()
+            result = runner.invoke(
+                main,
+                [
+                    '--price-ticks-topic', 'test_price_ticks',
+                    '--volume-stream-topic', 'test_volume_stream',
+                    '--tickers', 'AAPL,MSFT',
+                    '--dataset', 'us_stocks_essential'
+                ]
             )
-
-            # Assert run was called
+            assert result.exit_code == 0
+            mock_producer_class.assert_called_once_with(
+                'test_price_ticks',
+                'test_volume_stream',
+                ['AAPL', 'MSFT'],
+                'us_stocks_essential'
+            )
             mock_producer.run.assert_called_once()

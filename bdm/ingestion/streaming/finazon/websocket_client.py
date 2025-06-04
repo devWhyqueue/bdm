@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from typing import Dict, Any
 
 import click
@@ -10,7 +11,13 @@ from kafka import KafkaProducer
 
 logging.basicConfig(level=logging.INFO)
 
-FINAZON_API_URL = f"wss://ws.finazon.io/v1?apikey={os.environ['FINAZON_API_KEY']}"
+if 'pytest' in sys.modules:
+    FINAZON_API_KEY = os.environ.get('FINAZON_API_KEY', '')
+else:
+    FINAZON_API_KEY = os.environ.get('FINAZON_API_KEY')
+    if not FINAZON_API_KEY:
+        raise RuntimeError("FINAZON_API_KEY environment variable must be set for Finazon API access.")
+FINAZON_API_URL = f"wss://ws.finazon.io/v1?apikey={FINAZON_API_KEY}"
 
 
 class FinazonMarketDataProducer:
@@ -18,9 +25,10 @@ class FinazonMarketDataProducer:
     A class to connect to Finazon WebSocket API, receive market data and publish it to Kafka.
     """
 
-    def __init__(self, kafka_topic: str, ticker_symbols: list[str], data_source: str,
+    def __init__(self, price_ticks_topic: str, volume_stream_topic: str, ticker_symbols: list[str], data_source: str,
                  kafka_endpoint=os.getenv("KAFKA_ENDPOINT")):
-        self.kafka_topic = kafka_topic
+        self.price_ticks_topic = price_ticks_topic
+        self.volume_stream_topic = volume_stream_topic
         self.ticker_symbols = ticker_symbols
         self.data_source = data_source
         self.kafka_producer = KafkaProducer(bootstrap_servers=[kafka_endpoint])
@@ -72,7 +80,14 @@ class FinazonMarketDataProducer:
                     logging.warning("Received incomplete market data: %s", market_data)
                     continue
 
-                await self._send_interpolated_data(market_data)
+                # Send full event to volume stream (every second)
+                self.kafka_producer.send(
+                    self.volume_stream_topic,
+                    json.dumps(market_data).encode()
+                )
+
+                # Send interpolated price ticks to price ticks topic
+                await self._send_interpolated_price_ticks(market_data)
 
     @staticmethod
     def _validate_market_data(market_data: Dict[str, Any]) -> bool:
@@ -80,53 +95,38 @@ class FinazonMarketDataProducer:
         required_fields = ['o', 'c', 'h', 'l', 'v', 't', 's']
         return all(field in market_data for field in required_fields)
 
-    async def _send_interpolated_data(self, market_data: Dict[str, Any]) -> None:
-        """Interpolates 90 price points between open and close prices and sends to Kafka."""
+    async def _send_interpolated_price_ticks(self, market_data: Dict[str, Any]) -> None:
+        """Interpolates 90 price points between open and close prices and sends to Kafka price ticks topic with event time."""
         open_price = market_data['o']
         close_price = market_data['c']
         price_step = (close_price - open_price) / 90
+        base_timestamp = market_data.get('t', 0)
+        interval_ms = 1000 // 90  # Spread ticks evenly over 1 second
 
-        # Create a well-structured base message with descriptive field names
-        base_message = {
-            "data_source": market_data.get('d', ''),
-            "provider": market_data.get('p', ''),
-            "channel": market_data.get('ch', ''),
-            "frequency": market_data.get('f', ''),
-            "aggregation": market_data.get('aggr', ''),
-            "symbol": market_data.get('s', ''),
-            "timestamp": market_data.get('t', 0),
-            "high_price": market_data.get('h', 0.0),
-            "low_price": market_data.get('l', 0.0),
-            "volume": market_data.get('v', 0)
-        }
-
-        # Send 90 interpolated price points
         for i in range(90):
-            # Calculate the interpolated price for this step
             interpolated_price = round(open_price + i * price_step, 5)
-
-            # Create a message with the interpolated price
-            message = base_message.copy()
-            message["price"] = interpolated_price
-
-            # Send to Kafka
+            tick_timestamp = base_timestamp + i * interval_ms
+            message = {
+                "symbol": market_data.get('s', ''),
+                "timestamp": tick_timestamp,
+                "price": interpolated_price
+            }
             self.kafka_producer.send(
-                self.kafka_topic,
+                self.price_ticks_topic,
                 json.dumps(message).encode()
             )
-
-            # Small delay to prevent overwhelming the broker
             await asyncio.sleep(0.01)
 
 
 @click.command()
-@click.option('--topic', required=True, help='Kafka topic to send market data to.')
+@click.option('--price-ticks-topic', required=True, help='Kafka topic for high-frequency price ticks (hot path).')
+@click.option('--volume-stream-topic', required=True, help='Kafka topic for full market data (warm path).')
 @click.option('--tickers', required=True, help='Comma-separated list of ticker symbols to subscribe to.')
 @click.option('--dataset', required=True, help='Dataset identifier to subscribe to (e.g., us_stocks_essential).')
-def main(topic, tickers, dataset):
+def main(price_ticks_topic, volume_stream_topic, tickers, dataset):
     """Command line interface to start the Finazon market data producer."""
     ticker_symbols_list = tickers.split(',')
-    producer = FinazonMarketDataProducer(topic, ticker_symbols_list, dataset)
+    producer = FinazonMarketDataProducer(price_ticks_topic, volume_stream_topic, ticker_symbols_list, dataset)
     producer.run()
 
 
