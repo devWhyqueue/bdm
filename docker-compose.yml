@@ -25,13 +25,25 @@ services:
     extends:
       file: ./architecture/database.yml
       service: postgres
+    ports:
+      - "5432:5432"
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
+      - ./architecture/init-analytics-db.sh:/docker-entrypoint-initdb.d/init-analytics-db.sh
 
   redis:
     extends:
       file: ./architecture/database.yml
       service: redis
+
+  mongodb:
+    extends:
+      file: ./architecture/database.yml
+      service: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
 
   # ----------------------------------------------------------------------
   # Airflow services
@@ -200,6 +212,7 @@ services:
 
 volumes:
   postgres-db-volume:
+  mongo-data:
   minio-data:
   flink-checkpoints:
   flink-usrlib:
