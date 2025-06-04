@@ -197,9 +197,27 @@ services:
       - kafka-ui
       - jobmanager
 
+  influxdb:
+    extends:
+      file: ./architecture/influxdb.yml
+      service: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_ORG=bdm
+      - DOCKER_INFLUXDB_INIT_BUCKET=exploitation_zone_streaming_data
+      - DOCKER_INFLUXDB_INIT_RETENTION=1h
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=admintoken
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+
 volumes:
   postgres-db-volume:
   mongo-data:
   minio-data:
   flink-checkpoints:
   flink-usrlib:
+  influxdb-data:
