@@ -87,18 +87,21 @@ services:
   # Airflow task build services
   # ----------------------------------------------------------------------
 
-  finazon_stream_btc_usdt:
+  finazon_stream_ingestion:
     image: finazon_stream
     build:
       context: ./bdm/ingestion/streaming/finazon
       dockerfile: Dockerfile
-    container_name: finazon_stream_btc_usdt
-    command: [ "python", "websocket_client.py", "--price-ticks-topic", "btc_usdt_price_ticks", "--volume-stream-topic", "btc_usdt_volume_stream", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
+    container_name: finazon_stream_ingestion
+    command: [ "python", "websocket_client.py", "--price-ticks-topic", "${FINAZON_PRICE_TICKS_TOPIC}", "--volume-stream-topic", "${FINAZON_VOLUME_STREAM_TOPIC}", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
     environment:
-      - KAFKA_ENDPOINT=kafka:9092
+      - KAFKA_ENDPOINT=${KAFKA_ENDPOINT}
       - FINAZON_API_KEY=${FINAZON_API_KEY}
     depends_on:
       - kafka
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
   reddit_bitcoin:
     image: subreddit-scraper
@@ -175,7 +178,7 @@ services:
     container_name: bitcoin-aggregator
     environment:
       - KAFKA_ENDPOINT=kafka:9092
-      - KAFKA_TOPIC=btc_usdt
+      - KAFKA_TOPIC=${FINAZON_VOLUME_STREAM_TOPIC}
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
@@ -185,6 +188,27 @@ services:
       - taskmanager
       - kafka
       - minio
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+  # finazon-stream-pipeline-processor:
+  #   build:
+  #     context: bdm/processing/streaming/finazon_stream_pipeline_processor
+  #     dockerfile: Dockerfile
+  #   container_name: finazon-stream-pipeline-processor
+  #   environment:
+  #     - PRICE_TICKS_TOPIC=${FINAZON_PRICE_TICKS_TOPIC}
+  #     - VOLUME_STREAM_TOPIC=${FINAZON_VOLUME_STREAM_TOPIC}
+  #     - KAFKA_ENDPOINT=${KAFKA_ENDPOINT}
+  #     - INFLUXDB_PORT=8086
+  #   depends_on:
+  #     - jobmanager
+  #     - taskmanager
+  #     - kafka
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /etc/timezone:/etc/timezone:ro
 
   nginx:
     image: nginx:latest

@@ -80,6 +80,11 @@ class FinazonMarketDataProducer:
                     logging.warning("Received incomplete market data: %s", market_data)
                     continue
 
+                # Overwrite all timestamps in market_data with current UTC time (milliseconds) as Finazon generates timestamps in the future
+                import time
+                utc_now_ms = time.time_ns() // 1_000_000
+                market_data['t'] = utc_now_ms
+
                 # Send full event to volume stream (every second)
                 self.kafka_producer.send(
                     self.volume_stream_topic,
@@ -100,16 +105,16 @@ class FinazonMarketDataProducer:
         open_price = market_data['o']
         close_price = market_data['c']
         price_step = (close_price - open_price) / 90
-        base_timestamp = market_data.get('t', 0)
+        base_timestamp_ms = market_data.get('t', 0)
         interval_ms = 1000 // 90  # Spread ticks evenly over 1 second
 
         for i in range(90):
             interpolated_price = round(open_price + i * price_step, 5)
-            tick_timestamp = base_timestamp + i * interval_ms
+            tick_timestamp_ms = base_timestamp_ms + i * interval_ms
             message = {
-                "symbol": market_data.get('s', ''),
-                "timestamp": tick_timestamp,
-                "price": interpolated_price
+                "s": market_data.get('s', ''),
+                "t": tick_timestamp_ms,
+                "p": interpolated_price
             }
             self.kafka_producer.send(
                 self.price_ticks_topic,
