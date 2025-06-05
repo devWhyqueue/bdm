@@ -4,6 +4,9 @@ Pytest configuration file for Finazon WebSocket client tests.
 from unittest import mock
 
 import pytest
+from flask.cli import load_dotenv
+
+load_dotenv()
 
 
 @pytest.fixture
