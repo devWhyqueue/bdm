@@ -198,6 +198,54 @@ services:
       - kafka
       - minio
 
+  iceberg-init-runner:
+    image: bitnami/spark:3.5 # Use the same image as spark-iceberg for consistency
+    container_name: iceberg-init-runner
+    environment:
+      # Environment variables for S3A (MinIO) - same as spark-iceberg
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET_TRUSTED_ZONE=trusted-zone
+    volumes:
+      - ./bdm/processing/iceberg:/opt/bitnami/spark/work/iceberg_scripts # Mount scripts
+      - ./architecture/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf # Mount custom Spark defaults
+    command: /opt/bitnami/spark/work/iceberg_scripts/run_iceberg_init.sh
+    depends_on:
+      minio:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
+    networks: # Added to ensure it's on the same network
+      - bdm_network
+    restart: on-failure # Or 'no' if it should only attempt once. 'on-failure' is good for resilience if transient issues occur.
+
+  spark-iceberg:
+    image: bitnami/spark:3.5 # Using bitnami image which comes with hadoop S3 support
+    container_name: spark-iceberg
+    environment:
+      - SPARK_MODE=master # Not strictly necessary for spark-sql, but good for a standalone cluster setup
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      # Environment variables for S3A (MinIO)
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET_TRUSTED_ZONE=trusted-zone # For clarity in scripts if needed
+    volumes:
+      - ./bdm/processing/iceberg:/opt/bitnami/spark/work/iceberg_scripts # Mount scripts
+       - ./architecture/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf # Mount custom Spark defaults
+    depends_on:
+      minio:
+        condition: service_healthy
+      createbuckets: # Ensure buckets are created before Spark might try to access them
+        condition: service_completed_successfully
+    networks: # Added to ensure it's on the same network
+      - bdm_network
+    # command: bin/spark-class org.apache.spark.deploy.master.Master # Example for a master node, not strictly needed for spark-sql if run via exec
+
   nginx:
     image: nginx:latest
     restart: always
