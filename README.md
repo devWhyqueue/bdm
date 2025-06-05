@@ -56,9 +56,34 @@ Once the services are up, you can access:
 - **Flink UI**: [http://localhost/flink](http://localhost/flink)
 - **MinIO UI**: [http://localhost:9001](http://localhost:9001)
 
+### Accessing Databases
+
+**PostgreSQL (Consolidated Instance)**
+
+- **Host**: `localhost`
+- **Port**: `5432`
+
+This single PostgreSQL instance now hosts multiple databases. You can connect to it using any standard PostgreSQL client
+or GUI tool (e.g., pgAdmin, DBeaver, DataGrip).
+
+1. **Airflow Database:**
+    * **User**: `airflow`
+    * **Password**: `airflow`
+    * **Database Name**: `airflow`
+
+2. **Exploitation Zone Database (Analytics):**
+    * **User**: `analytics_user`
+    * **Password**: `analytics_password` (as set in `architecture/database.yml`)
+    * **Database Name**: `analytics_db`
+
+**MongoDB (`mongodb`)**
+
+- **Host**: `localhost`
+- **Port**: `27017`
+- Typically does not require authentication by default for local setups.
+
 To stop the project, run:
 
 ```sh
 docker compose down
 ```
-

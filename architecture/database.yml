@@ -2,9 +2,14 @@ services:
   postgres:
     image: postgres:15
     environment:
+      # Airflow
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
+      # Exploitation zone db
+      POSTGRES_ANALYTICS_DB: analytics_db
+      POSTGRES_ANALYTICS_USER: analytics_user
+      POSTGRES_ANALYTICS_PASSWORD: analytics_password
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "airflow" ]
       interval: 10s
@@ -21,5 +26,17 @@ services:
       interval: 10s
       timeout: 30s
       retries: 50
+      start_period: 30s
+    restart: always
+
+  mongodb:
+    image: mongo:latest
+    expose:
+      - "27017"
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.runCommand('ping')" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
       start_period: 30s
     restart: always

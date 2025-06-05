@@ -28,5 +28,7 @@ services:
       /usr/bin/mc config host add myminio http://minio:9000 minioadmin minioadmin;
       /usr/bin/mc mb myminio/landing-zone;
       /usr/bin/mc policy set public myminio/landing-zone;
+      /usr/bin/mc mb myminio/exploitation-zone;
+      /usr/bin/mc policy set public myminio/exploitation-zone;
       exit 0;
       "
