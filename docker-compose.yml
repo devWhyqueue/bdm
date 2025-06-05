@@ -105,7 +105,7 @@ services:
       context: ./bdm/ingestion/streaming/finazon
       dockerfile: Dockerfile
     container_name: finazon_stream_btc_usdt
-    command: [ "python", "websocket_client.py", "--topic", "btc_usdt", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
+    command: [ "python", "websocket_client.py", "--price-ticks-topic", "btc_usdt_price_ticks", "--stream-topic", "btc_usdt_stream", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
     environment:
       - KAFKA_ENDPOINT=kafka:9092
       - FINAZON_API_KEY=${FINAZON_API_KEY}
