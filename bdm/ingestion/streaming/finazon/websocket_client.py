@@ -18,10 +18,10 @@ class FinazonMarketDataProducer:
     A class to connect to Finazon WebSocket API, receive market data and publish it to Kafka.
     """
 
-    def __init__(self, price_ticks_topic: str, volume_stream_topic: str, ticker_symbols: list[str], data_source: str,
+    def __init__(self, price_ticks_topic: str, stream_topic: str, ticker_symbols: list[str], data_source: str,
                  kafka_endpoint=os.getenv("KAFKA_ENDPOINT")):
         self.price_ticks_topic = price_ticks_topic
-        self.volume_stream_topic = volume_stream_topic
+        self.stream_topic = stream_topic
         self.ticker_symbols = ticker_symbols
         self.data_source = data_source
         self.kafka_producer = KafkaProducer(bootstrap_servers=[kafka_endpoint])
@@ -66,7 +66,7 @@ class FinazonMarketDataProducer:
         await websocket.send(json.dumps(subscription_payload))
 
     def _transform_market_data(self, market_data: dict) -> dict:
-        """Transforms raw market data to the schema for the volume stream."""
+        """Transforms raw market data to the schema for the stream."""
         return {
             "data_source": market_data.get('d', self.data_source),
             "provider": market_data.get('p', 'Finazon'),
@@ -82,10 +82,10 @@ class FinazonMarketDataProducer:
             "volume": market_data.get('v', 0)
         }
 
-    def _send_to_volume_stream(self, transformed_market_data: dict) -> None:
-        """Sends transformed market data to the Kafka volume stream topic."""
+    def _send_to_stream(self, transformed_market_data: dict) -> None:
+        """Sends transformed market data to the Kafka stream topic."""
         self.kafka_producer.send(
-            self.volume_stream_topic,
+            self.stream_topic,
             json.dumps(transformed_market_data).encode()
         )
 
@@ -97,7 +97,7 @@ class FinazonMarketDataProducer:
             return
 
         transformed_data = self._transform_market_data(market_data)
-        self._send_to_volume_stream(transformed_data)
+        self._send_to_stream(transformed_data)
         await self._send_interpolated_price_ticks(market_data)
 
     async def _handle_websocket_connection(self) -> None:
@@ -140,13 +140,13 @@ class FinazonMarketDataProducer:
 
 @click.command()
 @click.option('--price-ticks-topic', required=True, help='Kafka topic for high-frequency price ticks (hot path).')
-@click.option('--volume-stream-topic', required=True, help='Kafka topic for full market data (warm path).')
+@click.option('--stream-topic', required=True, help='Kafka topic for full market data (warm path).')
 @click.option('--tickers', required=True, help='Comma-separated list of ticker symbols to subscribe to.')
 @click.option('--dataset', required=True, help='Dataset identifier to subscribe to (e.g., us_stocks_essential).')
-def main(price_ticks_topic, volume_stream_topic, tickers, dataset):
+def main(price_ticks_topic, stream_topic, tickers, dataset):
     """Command line interface to start the Finazon market data producer."""
     ticker_symbols_list = tickers.split(',')
-    producer = FinazonMarketDataProducer(price_ticks_topic, volume_stream_topic, ticker_symbols_list, dataset)
+    producer = FinazonMarketDataProducer(price_ticks_topic, stream_topic, ticker_symbols_list, dataset)
     producer.run()
 
 
