@@ -210,15 +210,12 @@ services:
     volumes:
       - ./bdm/processing/iceberg:/opt/bitnami/spark/work/iceberg_scripts # Mount scripts
       - ./architecture/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf # Mount custom Spark defaults
-    command: /opt/bitnami/spark/work/iceberg_scripts/run_iceberg_init.sh
+    command: [ "bash", "/opt/bitnami/spark/work/iceberg_scripts/run_iceberg_init.sh" ]
     depends_on:
       minio:
         condition: service_healthy
       createbuckets:
         condition: service_completed_successfully
-    networks: # Added to ensure it's on the same network
-      - bdm_network
-    restart: on-failure # Or 'no' if it should only attempt once. 'on-failure' is good for resilience if transient issues occur.
 
   spark-iceberg:
     image: bitnami/spark:3.5 # Using bitnami image which comes with hadoop S3 support
@@ -236,15 +233,12 @@ services:
       - MINIO_BUCKET_TRUSTED_ZONE=trusted-zone # For clarity in scripts if needed
     volumes:
       - ./bdm/processing/iceberg:/opt/bitnami/spark/work/iceberg_scripts # Mount scripts
-       - ./architecture/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf # Mount custom Spark defaults
+      - ./architecture/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf # Mount custom Spark defaults
     depends_on:
       minio:
         condition: service_healthy
       createbuckets: # Ensure buckets are created before Spark might try to access them
         condition: service_completed_successfully
-    networks: # Added to ensure it's on the same network
-      - bdm_network
-    # command: bin/spark-class org.apache.spark.deploy.master.Master # Example for a master node, not strictly needed for spark-sql if run via exec
 
   nginx:
     image: nginx:latest
