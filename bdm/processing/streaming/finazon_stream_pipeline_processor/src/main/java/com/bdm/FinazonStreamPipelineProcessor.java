@@ -24,6 +24,8 @@ import org.apache.flink.streaming.api.functions.co.ProcessJoinFunction;
 import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
+import com.bdm.InfluxDBSinks.InfluxDBVWAPSink;
+import com.bdm.InfluxDBSinks.InfluxDBHotPathSink;
 
 public class FinazonStreamPipelineProcessor {
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -166,9 +168,14 @@ public class FinazonStreamPipelineProcessor {
 
     public static void main(String[] args) throws Exception {
         String priceTicksTopic = getEnvOrThrow("PRICE_TICKS_TOPIC");
-        String volumeStreamTopic = getEnvOrThrow("VOLUME_STREAM_TOPIC");
+        String streamTopic = getEnvOrThrow("STREAM_TOPIC");
         String kafkaBootstrapServers = getEnvOrThrow("KAFKA_ENDPOINT");
+        String influxdbHost = getEnvOrThrow("INFLUXDB_HOST");
         String influxdbPort = getEnvOrThrow("INFLUXDB_PORT");
+        String influxdbBucket = getEnvOrThrow("INFLUXDB_BUCKET");
+        String influxdbOrg = getEnvOrThrow("INFLUXDB_ORG");
+        String influxdbToken = getEnvOrThrow("INFLUXDB_TOKEN");
+        String influxdbUrl = "http://" + influxdbHost + ":" + influxdbPort;
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
@@ -193,7 +200,7 @@ public class FinazonStreamPipelineProcessor {
 
         // Warm path (full market data)
         FlinkKafkaConsumer<String> warmConsumer = new FlinkKafkaConsumer<>(
-                volumeStreamTopic,
+                streamTopic,
                 new SimpleStringSchema(),
                 properties
         );
@@ -249,7 +256,10 @@ public class FinazonStreamPipelineProcessor {
             .apply(new VWAPWindowFunction())
             .name("VWAP 1min Window");
 
-        vwapStream.print(); // Output VWAP to console (replace with InfluxDB sink as needed)
+        // Write VWAP results to InfluxDB
+        vwapStream.addSink(new InfluxDBVWAPSink(influxdbUrl, influxdbBucket, influxdbOrg, influxdbToken)).name("InfluxDB VWAP Sink");
+        // Write hot-path ticks to InfluxDB
+        validatedHotStream.addSink(new InfluxDBHotPathSink(influxdbUrl, influxdbBucket, influxdbOrg, influxdbToken)).name("InfluxDB HotPath Sink");
 
         env.execute("Finazon Stream Pipeline Processor");
     }
