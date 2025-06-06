@@ -124,9 +124,10 @@ public class FinazonStreamPipelineProcessor {
                 double price = priceNode.has("price") ? priceNode.get("price").asDouble() : 0.0;
                 long perSecondVolume = volumeNode.has("per_second_volume") ? volumeNode.get("per_second_volume").asLong() : 0L;
                 String symbol = priceNode.has("symbol") ? priceNode.get("symbol").asText() : "unknown";
+                String dataSource = volumeNode.has("data_source") ? volumeNode.get("data_source").asText() : "unknown";
                 long timestamp = volumeNode.has("timestamp") ? volumeNode.get("timestamp").asLong() : 0L;
                 // Output tuple for window aggregation
-                out.collect(String.format("{\"symbol\":\"%s\",\"timestamp\":%d,\"price\":%f,\"per_second_volume\":%d}", symbol, timestamp, price, perSecondVolume));
+                out.collect(String.format("{\"symbol\":\"%s\",\"data_source\":\"%s\",\"timestamp\":%d,\"price\":%f,\"per_second_volume\":%d}", symbol, dataSource, timestamp, price, perSecondVolume));
             } catch (Exception e) {
                 System.err.println("Failed to join price and volume: " + e.getMessage());
             }
@@ -140,6 +141,7 @@ public class FinazonStreamPipelineProcessor {
             double sumPxV = 0.0;
             long sumV = 0L;
             long windowEnd = window.getEnd();
+            String dataSource = "unknown";
             for (String json : input) {
                 try {
                     JsonNode node = objectMapper.readTree(json);
@@ -147,12 +149,15 @@ public class FinazonStreamPipelineProcessor {
                     long perSecondVolume = node.has("per_second_volume") ? node.get("per_second_volume").asLong() : 0L;
                     sumPxV += price * perSecondVolume;
                     sumV += perSecondVolume;
+                    if (node.has("data_source")) {
+                        dataSource = node.get("data_source").asText();
+                    }
                 } catch (Exception e) {
                     System.err.println("Failed to process input for VWAP: " + e.getMessage());
                 }
             }
             double vwap = sumV > 0 ? sumPxV / sumV : 0.0;
-            out.collect(String.format("{\"symbol\":\"%s\",\"window_end\":%d,\"vwap\":%f}", symbol, windowEnd, vwap));
+            out.collect(String.format("{\"symbol\":\"%s\",\"data_source\":\"%s\",\"window_end\":%d,\"vwap\":%f}", symbol, dataSource, windowEnd, vwap));
         }
     }
 
