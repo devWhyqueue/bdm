@@ -5,16 +5,29 @@ set -e
 
 echo "--- Starting Iceberg Initialization Script ---"
 
-# Define MinIO bucket and catalog path details
-MINIO_BUCKET_TRUSTED_ZONE="trusted-zone"
-ICEBERG_CATALOG_DIR="iceberg_catalog"
-
 echo "--- Ensuring Docker services are up (minio, spark-iceberg) ---"
+MAX_RETRIES=10
+RETRY_INTERVAL=10
+echo "Checking readiness of dependent services..."
+for ((i=1; i<=MAX_RETRIES; i++)); do
+    # 1. Check MinIO health via curl
+    if curl -s http://minio:9000/minio/health/live >/dev/null; then
+        # 2. Check if spark-iceberg:7077 is accepting TCP connections via /dev/tcp
+        if bash -c "</dev/tcp/spark-iceberg/7077" >/dev/null 2>&1; then
+            echo "Services are ready."
+            break
+        fi
+    fi
 
-echo "--- Waiting for dependent services (MinIO, etc.) to be fully ready ---"
-# The docker-compose depends_on handles service readiness.
-# Adding a small sleep here can still be beneficial for file system operations post bucket creation.
-sleep 15
+    echo "Services not ready yet. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"
+    sleep "$RETRY_INTERVAL"
+done
+
+if (( i > MAX_RETRIES )); then
+    echo "Error: Services failed to become ready within the timeout period."
+    exit 1
+fi
+
 
 # Define the spark-sql command to be executed
 # Spark configurations are loaded from /opt/bitnami/spark/conf/spark-defaults.conf

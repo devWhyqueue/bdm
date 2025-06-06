@@ -199,7 +199,7 @@ services:
       - minio
 
   iceberg-init-runner:
-    image: bitnami/spark:3.5 # Use the same image as spark-iceberg for consistency
+    image: bitnami/spark:3.5.6 # Use the same image as spark-iceberg for consistency
     container_name: iceberg-init-runner
     environment:
       # Environment variables for S3A (MinIO) - same as spark-iceberg
@@ -218,7 +218,7 @@ services:
         condition: service_completed_successfully
 
   spark-iceberg:
-    image: bitnami/spark:3.5 # Using bitnami image which comes with hadoop S3 support
+    image: bitnami/spark:3.5.6 # Using bitnami image which comes with hadoop S3 support
     container_name: spark-iceberg
     environment:
       - SPARK_MODE=master # Not strictly necessary for spark-sql, but good for a standalone cluster setup
