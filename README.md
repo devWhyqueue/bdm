@@ -56,6 +56,7 @@ Once the services are up, you can access:
 - **Flink UI**: [http://localhost/flink](http://localhost/flink)
 - **MinIO UI**: [http://localhost:9001](http://localhost:9001)
 - **InfluxDB UI**: [http://localhost:8086](http://localhost:8086)
+- **Grafana**: [http://localhost:3000](http://localhost:3000)
 
 ### Accessing Databases
 
@@ -92,6 +93,16 @@ or GUI tool (e.g., pgAdmin, DBeaver, DataGrip).
 - **Bucket**: `exploitation_zone_streaming_data` (see `DOCKER_INFLUXDB_INIT_BUCKET`)
 - Default credentials and bucket setup can be found in `architecture/influxdb.yml`.
 - Used for time-series data from streaming jobs (e.g., price ticks, VWAP).
+
+### Grafana
+
+- **Grafana** service is now included for real-time visualization of both streams:
+  - Real-time stock price (hot-path) graph: price vs. time, grouped by symbol.
+  - VWAP (warm-path) graph: VWAP vs. time, grouped by symbol.
+  - VWAP stream details (symbol, data_source) are displayed as stat panels.
+  - Access Grafana at http://localhost:3000 (default: admin/admin).
+  - InfluxDB is preconfigured as a data source; dashboard is auto-provisioned.
+  - See `architecture/grafana/` for provisioning and dashboard files.
 
 To stop the project, run:
 
