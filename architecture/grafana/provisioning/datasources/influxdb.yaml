@@ -1,0 +1,17 @@
+apiVersion: 1
+
+# Configure InfluxDB as a data source
+# This file will be mounted at /etc/grafana/provisioning/datasources/influxdb.yaml
+
+datasources:
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    isDefault: true
+    jsonData:
+      version: Flux
+      organization: bdm
+      defaultBucket: exploitation_zone_streaming_data
+    secureJsonData:
+      token: admintoken
