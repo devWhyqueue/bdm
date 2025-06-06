@@ -204,23 +204,23 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
 
-  # finazon-stream-pipeline-processor:
-  #   build:
-  #     context: bdm/processing/streaming/finazon_stream_pipeline_processor
-  #     dockerfile: Dockerfile
-  #   container_name: finazon-stream-pipeline-processor
-  #   environment:
-  #     - PRICE_TICKS_TOPIC=${FINAZON_PRICE_TICKS_TOPIC}
-  #     - VOLUME_STREAM_TOPIC=${FINAZON_VOLUME_STREAM_TOPIC}
-  #     - KAFKA_ENDPOINT=${KAFKA_ENDPOINT}
-  #     - INFLUXDB_PORT=8086
-  #   depends_on:
-  #     - jobmanager
-  #     - taskmanager
-  #     - kafka
-  #   volumes:
-  #     - /etc/localtime:/etc/localtime:ro
-  #     - /etc/timezone:/etc/timezone:ro
+  finazon-stream-pipeline-processor:
+    build:
+      context: bdm/processing/streaming/finazon_stream_pipeline_processor
+      dockerfile: Dockerfile
+    container_name: finazon-stream-pipeline-processor
+    environment:
+      - PRICE_TICKS_TOPIC=${FINAZON_PRICE_TICKS_TOPIC}
+      - VOLUME_STREAM_TOPIC=${FINAZON_VOLUME_STREAM_TOPIC}
+      - KAFKA_ENDPOINT=${KAFKA_ENDPOINT}
+      - INFLUXDB_PORT=8086
+    depends_on:
+      - jobmanager
+      - taskmanager
+      - kafka
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
   nginx:
     image: nginx:latest
