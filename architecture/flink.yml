@@ -5,6 +5,7 @@ services:
     ports:
       - "8081:8081"
     command: jobmanager
+    entrypoint: ["/bin/sh", "-c", "chmod -R 777 /opt/flink/web-upload && exec /docker-entrypoint.sh jobmanager"]
     environment:
       - |
         FLINK_PROPERTIES=
