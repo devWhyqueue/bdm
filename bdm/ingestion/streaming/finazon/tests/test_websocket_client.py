@@ -20,7 +20,7 @@ class TestFinazonMarketDataProducer:
         """Create a producer instance for testing."""
         return FinazonMarketDataProducer(
             price_ticks_topic="test_price_ticks",
-            volume_stream_topic="test_volume_stream",
+            stream_topic="test_stream",
             ticker_symbols=["AAPL", "MSFT"],
             data_source="us_stocks_essential"
         )
@@ -29,7 +29,7 @@ class TestFinazonMarketDataProducer:
     def test_init(producer, mock_kafka_producer):
         """Test initialization of the producer."""
         assert producer.price_ticks_topic == "test_price_ticks"
-        assert producer.volume_stream_topic == "test_volume_stream"
+        assert producer.stream_topic == "test_stream"
         assert producer.ticker_symbols == ["AAPL", "MSFT"]
         assert producer.data_source == "us_stocks_essential"
         assert producer.kafka_producer is mock_kafka_producer
@@ -202,7 +202,7 @@ class TestCommandLineInterface:
                 main,
                 [
                     '--price-ticks-topic', 'test_price_ticks',
-                    '--volume-stream-topic', 'test_volume_stream',
+                    '--stream-topic', 'test_stream',
                     '--tickers', 'AAPL,MSFT',
                     '--dataset', 'us_stocks_essential'
                 ]
@@ -210,7 +210,7 @@ class TestCommandLineInterface:
             assert result.exit_code == 0
             mock_producer_class.assert_called_once_with(
                 'test_price_ticks',
-                'test_volume_stream',
+                'test_stream',
                 ['AAPL', 'MSFT'],
                 'us_stocks_essential'
             )

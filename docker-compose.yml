@@ -25,13 +25,25 @@ services:
     extends:
       file: ./architecture/database.yml
       service: postgres
+    ports:
+      - "5432:5432"
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
+      - ./architecture/init-analytics-db.sh:/docker-entrypoint-initdb.d/init-analytics-db.sh
 
   redis:
     extends:
       file: ./architecture/database.yml
       service: redis
+
+  mongodb:
+    extends:
+      file: ./architecture/database.yml
+      service: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
 
   # ----------------------------------------------------------------------
   # Airflow services
@@ -92,8 +104,8 @@ services:
     build:
       context: ./bdm/ingestion/streaming/finazon
       dockerfile: Dockerfile
-    container_name: finazon_stream_ingestion
-    command: [ "python", "websocket_client.py", "--price-ticks-topic", "${FINAZON_PRICE_TICKS_TOPIC}", "--volume-stream-topic", "${FINAZON_VOLUME_STREAM_TOPIC}", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
+    container_name: finazon_stream_btc_usdt
+    command: [ "python", "websocket_client.py", "--price-ticks-topic", "${FINAZON_PRICE_TICKS_TOPIC}", "--stream-topic", "${FINAZON_VOLUME_STREAM_TOPIC}", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
     environment:
       - KAFKA_ENDPOINT=${KAFKA_ENDPOINT}
       - FINAZON_API_KEY=${FINAZON_API_KEY}
@@ -224,6 +236,7 @@ services:
 
 volumes:
   postgres-db-volume:
+  mongo-data:
   minio-data:
   flink-checkpoints:
   flink-usrlib:
