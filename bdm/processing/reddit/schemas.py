@@ -1,5 +1,5 @@
 from pyspark.sql.types import (
-    StructType, StructField, StringType, TimestampType, IntegerType, DoubleType, BooleanType, ArrayType
+    StructType, StructField, StringType, TimestampType, IntegerType, DoubleType, BooleanType, ArrayType, LongType
 )
 
 # JSON Schema for raw Reddit data file validation (Draft-07)
@@ -63,10 +63,35 @@ REDDIT_POST_SPARK_SCHEMA = StructType([
     StructField("subreddit", StringType(), nullable=False),  # From metadata
     StructField("scraped_at", TimestampType(), nullable=False),  # From metadata, for partitioning
     StructField("source_file", StringType(), nullable=False),
-    StructField("checksum_sha256", StringType(), nullable=False)
+    StructField("checksum_sha256", StringType(), nullable=False),
+    StructField("media_items", ArrayType(MEDIA_ITEM_SCHEMA, True), nullable=True) # Added media_items field
+])
+
+# Define the schema for individual media items as processed and stored
+MEDIA_ITEM_SCHEMA = StructType([
+    StructField("media_type", StringType(), True), # Original declared media type
+    StructField("s3_url", StringType(), True), # Original S3 URL
+    StructField("source_url", StringType(), True), # Original source URL from Reddit
+    StructField("filename", StringType(), True), # Original filename
+    StructField("content_type", StringType(), True), # Original content type
+    StructField("processed_s3_url", StringType(), True), # S3 URL after processing
+    StructField("processed_format", StringType(), True), # e.g., 'jpeg', 'mp4'
+    StructField("processed_size_bytes", LongType(), True), # Size of the processed file
+    StructField("validation_error", StringType(), True), # Error message if validation failed
+    StructField("conversion_error", StringType(), True), # Error message if conversion failed
+    StructField("size_error", StringType(), True) # Error message if size check failed
 ])
 
 # PySpark Schemas for processing raw data in Spark
+# Define the schema for individual media items as found in the raw JSON
+RAW_MEDIA_ITEM_SCHEMA_ENTRY = StructType([
+    StructField("media_type", StringType(), True),
+    StructField("s3_url", StringType(), True),
+    StructField("source_url", StringType(), True),
+    StructField("filename", StringType(), True),
+    StructField("content_type", StringType(), True)
+])
+
 SPARK_RAW_POST_SCHEMA = StructType([
     StructField("id", StringType(), True),
     StructField("title", StringType(), True),
@@ -80,6 +105,7 @@ SPARK_RAW_POST_SCHEMA = StructType([
     StructField("upvote_ratio", DoubleType(), True),
     StructField("is_original_content", BooleanType(), True),
     StructField("is_self", BooleanType(), True),
+    StructField("media", ArrayType(RAW_MEDIA_ITEM_SCHEMA_ENTRY, True), True) # Added media field
 ])
 
 SPARK_RAW_METADATA_SCHEMA = StructType([

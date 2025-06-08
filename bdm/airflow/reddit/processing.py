@@ -22,7 +22,8 @@ env_vars = {
     'MINIO_ENDPOINT': '{{ conn.s3.extra_dejson.host }}',
     'MINIO_ACCESS_KEY': '{{ conn.s3.login }}',
     'MINIO_SECRET_KEY': '{{ conn.s3.password }}',
-    'MINIO_BUCKET': 'trusted-zone',
+    'MINIO_BUCKET': 'trusted-zone', # This is for the Iceberg table, not media.
+    'PROCESSED_ZONE_BUCKET': '{{ params.processed_zone_bucket }}',
 }
 
 # Default arguments for the DAG
@@ -62,7 +63,13 @@ default_args = {
             type="string",
             title="Docker Image",
             description="Docker image for the Spark Reddit processor (e.g., 'myimage:tag')."
-        )
+        ),
+        "processed_zone_bucket": Param(
+            "processed-zone", # Default value
+            type="string",
+            title="Processed Zone Bucket",
+            description="S3/MinIO bucket name for storing processed media files."
+        ),
     }
 )
 def reddit_processing_dag():

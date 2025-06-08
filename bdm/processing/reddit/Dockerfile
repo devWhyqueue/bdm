@@ -2,6 +2,17 @@ FROM bitnami/spark:3.5.6
 
 WORKDIR /app
 
+USER root
+
+# Install FFmpeg, ImageMagick, and libmagic (for python-magic)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg imagemagick libmagic1 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Switch back to the default spark user (often 1001 in bitnami images)
+USER 1001
+
 # 0) Copy spark-defaults.conf into the Spark conf dir
 COPY architecture/spark-defaults.conf /opt/bitnami/spark/conf/spark-defaults.conf
 
