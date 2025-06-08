@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from airflow import DAG
+from airflow.decorators import dag
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 
 # Default arguments for the DAG
@@ -13,7 +14,7 @@ default_args = {
 }
 
 
-def create_scraper_task(dag, subreddit, sort_by='new', time_filter='all',
+def create_scraper_task(subreddit, sort_by='new', time_filter='all',
                         limit=25, prefix='', task_id=None):
     """Create a DockerOperator task for a specific subreddit configuration."""
     if task_id is None:
@@ -50,24 +51,44 @@ def create_scraper_task(dag, subreddit, sort_by='new', time_filter='all',
         network_mode="bdm_default",
         environment=env_vars,
         command=cmd_args,
-        dag=dag,
+        do_xcom_push=True,  # Push stdout (filename) to XComs
     )
 
 
-# Define the DAG
-subreddit_scraper = DAG(
-    'subreddit_scraper',
+# Define the DAG using TaskFlow API
+@dag(
+    dag_id='reddit_ingestion',
     default_args=default_args,
-    description='Scrape various subreddits',
-    schedule_interval='* * * * *',  # Run every minute
+    description='Scrape various subreddits and trigger processing DAG (TaskFlow API)',
+    schedule_interval='*/5 * * * *',
     start_date=datetime(2025, 3, 22),
     catchup=False,
+    tags=['reddit', 'ingestion', 'scraper', 'taskflow'],
 )
+def subreddit_scraper_dag():
+    """Defines the subreddit scraping DAG using TaskFlow API."""
 
-# Bitcoin - new posts every minute
-bitcoin_task = create_scraper_task(
-    dag=subreddit_scraper,
-    subreddit='bitcoin',
-    sort_by='new',
-    limit=5,
-)
+    # Bitcoin - new posts every minute
+    bitcoin_task = create_scraper_task(
+        subreddit='bitcoin',
+        sort_by='new',
+        prefix='{{ ds }}',
+    )
+
+    trigger_reddit_processing_dag = TriggerDagRunOperator(
+        task_id="trigger_reddit_processing",
+        trigger_dag_id="reddit_processing",  # DAG ID of the processing DAG
+        conf={
+            "logical_date": "{{ ds }}",
+            "input_filename": "{{ ti.xcom_pull(task_ids='scrape_bitcoin_new') }}"
+        },  # Pass execution date and filename to the triggered DAG
+        wait_for_completion=False,  # Set to True if this DAG should wait for the triggered DAG
+        poke_interval=30,  # How often to check status if wait_for_completion=True
+    )
+
+    # Set task dependency
+    bitcoin_task >> trigger_reddit_processing_dag
+
+
+# Instantiate the DAG to make it discoverable by Airflow
+subreddit_scraper_dag_instance = subreddit_scraper_dag()

@@ -10,7 +10,7 @@ class TestProcessGalleryPost:
 
     @mock.patch('bdm.ingestion.batch.reddit.post_processor.process_gallery_image')
     def test_process_gallery_post_success(self, mock_process_image):
-        """Test successful processing of gallery post."""
+        """Test successful reddit of gallery post."""
         # Create a mock gallery post
         mock_post = mock.Mock(spec=Submission)
         mock_post.is_gallery = True
@@ -169,7 +169,7 @@ class TestProcessGalleryPost:
 
     @mock.patch('bdm.ingestion.batch.reddit.post_processor.process_gallery_image')
     def test_process_gallery_post_exception(self, mock_process_image):
-        """Test handling of exceptions during gallery processing."""
+        """Test handling of exceptions during gallery reddit."""
         # Create a mock gallery post
         mock_post = mock.Mock(spec=Submission)
         mock_post.is_gallery = True

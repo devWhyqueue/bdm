@@ -1,18 +1,20 @@
 FROM python:3.12-slim
 
+# 1) Set a working dir for everything that follows
 WORKDIR /app
 
-# Copy project
-COPY bdm/ ./bdm/
+# 2) Copy your entire `bdm` package (the context) into /app/bdm
+COPY . /app/bdm
 
-# Install dependencies
-RUN pip install --no-cache-dir -r bdm/ingestion/batch/reddit/requirements.txt
+# 3) Install only your Reddit-scraper dependencies
+RUN pip install --no-cache-dir \
+      -r /app/bdm/ingestion/batch/reddit/requirements.txt
 
-# Set PYTHONPATH so Python can resolve the package
+# 4) Ensure Python can import `bdm.*`
 ENV PYTHONPATH=/app
 
-# Set entrypoint
-ENTRYPOINT ["python", "bdm/ingestion/batch/reddit/subreddit_scraper.py"]
+# 5) Invoke the scraper as a module so imports like `from bdm...` work
+ENTRYPOINT ["python", "-m", "bdm.ingestion.batch.reddit.subreddit_scraper"]
 
-# Default command (can be overridden)
+# 6) Allow extra flags via CMD (e.g. "--help")
 CMD []

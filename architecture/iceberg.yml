@@ -1,0 +1,20 @@
+services:
+  iceberg-init-runner:
+    image: bitnami/spark:3.5.6 # Use the same image as spark-iceberg for consistency
+    container_name: iceberg-init-runner
+    environment:
+      # Environment variables for S3A (MinIO) - same as spark-iceberg
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET_LANDING_ZONE=landing-zone
+      - MINIO_BUCKET_TRUSTED_ZONE=trusted-zone
+    volumes:
+      - ../bdm/processing/iceberg:/opt/bitnami/spark/work/iceberg_scripts # Mount scripts
+      - ./spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf # Mount custom Spark defaults
+    command: [ "bash", "/opt/bitnami/spark/work/iceberg_scripts/run_iceberg_init.sh" ]
+    depends_on:
+      minio:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully

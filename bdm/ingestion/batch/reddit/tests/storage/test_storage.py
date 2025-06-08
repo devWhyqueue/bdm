@@ -1,5 +1,5 @@
 """
-Tests for the storage module in the Reddit batch ingestion system.
+Tests for the storage module in the Reddit batch finnhub system.
 """
 import json
 from unittest import mock
@@ -35,7 +35,7 @@ class TestStorageMetadata:
         posts = [{"id": "post1"}, {"id": "post2"}]
 
         # Mock the count_media_stats function to return predictable values
-        with mock.patch('bdm.ingestion.batch.reddit.storage.count_media_stats') as mock_count:
+        with mock.patch('bdm.finnhub.batch.reddit.storage.count_media_stats') as mock_count:
             mock_count.return_value = (1, 3)  # 1 post with media, 3 total media items
 
             metadata = create_metadata("askreddit", "top", "week", posts)
@@ -54,7 +54,7 @@ class TestStorageMetadata:
         posts = [{"id": "post1"}, {"id": "post2"}, {"id": "post3"}]
 
         # Mock the count_media_stats function to return predictable values
-        with mock.patch('bdm.ingestion.batch.reddit.storage.count_media_stats') as mock_count:
+        with mock.patch('bdm.finnhub.batch.reddit.storage.count_media_stats') as mock_count:
             mock_count.return_value = (0, 0)  # No posts with media
 
             metadata = create_metadata("askreddit", "new", "day", posts)
@@ -77,10 +77,12 @@ class TestSaveToStorage:
         posts = [{"id": "post1"}, {"id": "post2"}]
 
         # Patch get_minio_client to return our mock client
-        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client), mock.patch('bdm.ingestion.batch.reddit.storage.generate_filename') as mock_gen_filename:
+        with mock.patch('bdm.finnhub.batch.reddit.storage.get_minio_client',
+                        return_value=mock_minio_client), mock.patch(
+                'bdm.finnhub.batch.reddit.storage.generate_filename') as mock_gen_filename:
             mock_gen_filename.return_value = "reddit/daily/askreddit/20230401_123045.json"
 
-            with mock.patch('bdm.ingestion.batch.reddit.storage.create_metadata') as mock_create_meta:
+            with mock.patch('bdm.finnhub.batch.reddit.storage.create_metadata') as mock_create_meta:
                 mock_metadata = {
                     "subreddit": "askreddit",
                     "sort_by": "hot",
@@ -115,7 +117,7 @@ class TestSaveToStorage:
         posts = [{"id": "post1"}]
 
         # Patch get_minio_client to return our mock client
-        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
+        with mock.patch('bdm.finnhub.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
             # Make the MinIO client raise an exception
             mock_minio_client.put_object.side_effect = Exception("Connection error")
 
