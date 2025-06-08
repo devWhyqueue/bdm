@@ -47,7 +47,7 @@ class TestSubredditScraper:
     @pytest.fixture
     def mock_posts_generator(self):
         """Create a mock posts generator."""
-        with mock.patch('bdm.finnhub.batch.reddit.reddit_api.get_posts_generator') as mock_generator:
+        with mock.patch('bdm.ingestion.batch.reddit.reddit_api.get_posts_generator') as mock_generator:
             yield mock_generator
 
     @pytest.fixture
