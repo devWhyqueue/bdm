@@ -135,7 +135,7 @@ class TestSubredditScraper:
         mock_posts_generator.return_value = [mock_post]
 
         # Configure extract_post_data to raise an exception
-        with mock.patch('bdm.finnhub.batch.reddit.reddit_api.extract_post_data') as mock_extract:
+        with mock.patch('bdm.ingestion.batch.reddit.reddit_api.extract_post_data') as mock_extract:
             mock_extract.side_effect = Exception("Extraction error")
 
             # Assert that the error is propagated
