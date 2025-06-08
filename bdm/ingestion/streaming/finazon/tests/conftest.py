@@ -12,7 +12,7 @@ load_dotenv()
 @pytest.fixture
 def mock_kafka_producer():
     """Creates a mock for the KafkaProducer."""
-    with mock.patch('bdm.finnhub.streaming.finazon.websocket_client.KafkaProducer') as mock_producer_class:
+    with mock.patch('bdm.ingestion.streaming.finazon.websocket_client.KafkaProducer') as mock_producer_class:
         # Create mock producer
         mock_producer = mock.Mock()
         mock_producer_class.return_value = mock_producer

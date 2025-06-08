@@ -192,7 +192,7 @@ class TestCommandLineInterface:
     @staticmethod
     def test_main():
         with mock.patch(
-                'bdm.finnhub.streaming.finazon.websocket_client.FinazonMarketDataProducer') as mock_producer_class:
+                'bdm.ingestion.streaming.finazon.websocket_client.FinazonMarketDataProducer') as mock_producer_class:
             mock_producer = mock.Mock()
             mock_producer_class.return_value = mock_producer
             # Simulate Click CLI call using CliRunner

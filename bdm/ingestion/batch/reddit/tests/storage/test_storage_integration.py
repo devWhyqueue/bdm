@@ -64,9 +64,9 @@ class TestStorageIntegration:
         ]
 
         # Save the data to storage
-        with mock.patch('bdm.finnhub.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
+        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
             # Mock the media stats function to avoid any actual reddit
-            with mock.patch('bdm.finnhub.batch.reddit.storage.count_media_stats') as mock_count:
+            with mock.patch('bdm.ingestion.batch.reddit.storage.count_media_stats') as mock_count:
                 mock_count.return_value = (2, 3)  # 2 posts with media, 3 total media items
 
                 save_to_storage(
@@ -113,9 +113,9 @@ class TestStorageIntegration:
         empty_posts = []
 
         # Save the empty data
-        with mock.patch('bdm.finnhub.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
+        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
             # Mock the media stats function
-            with mock.patch('bdm.finnhub.batch.reddit.storage.count_media_stats') as mock_count:
+            with mock.patch('bdm.ingestion.batch.reddit.storage.count_media_stats') as mock_count:
                 mock_count.return_value = (0, 0)  # No posts with media
 
                 save_to_storage(
@@ -158,9 +158,9 @@ class TestStorageIntegration:
         ]
 
         # Save the data
-        with mock.patch('bdm.finnhub.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
+        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
             # Mock the media stats function
-            with mock.patch('bdm.finnhub.batch.reddit.storage.count_media_stats') as mock_count:
+            with mock.patch('bdm.ingestion.batch.reddit.storage.count_media_stats') as mock_count:
                 mock_count.return_value = (0, 0)  # No posts with media
 
                 save_to_storage(

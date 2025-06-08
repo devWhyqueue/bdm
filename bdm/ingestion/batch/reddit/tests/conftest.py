@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture
 def mock_minio_client():
     """Creates a mock for the MinIO client."""
-    with mock.patch('bdm.finnhub.batch.utils.get_minio_client') as mock_client:
+    with mock.patch('bdm.ingestion.batch.utils.get_minio_client') as mock_client:
         # Create a mock S3 client
         mock_s3 = mock.Mock()
         mock_client.return_value = mock_s3

@@ -18,7 +18,7 @@ class TestSubredditScraper:
     @pytest.fixture
     def mock_scrape_subreddit(self):
         """Create a mock for scrape_subreddit function."""
-        with mock.patch('bdm.finnhub.batch.reddit.subreddit_scraper.scrape_subreddit') as mock_scrape:
+        with mock.patch('bdm.ingestion.batch.reddit.subreddit_scraper.scrape_subreddit') as mock_scrape:
             mock_scrape.return_value = [
                 {'id': 'post1', 'title': 'Test Post 1'},
                 {'id': 'post2', 'title': 'Test Post 2'},
@@ -28,13 +28,13 @@ class TestSubredditScraper:
     @pytest.fixture
     def mock_save_to_storage(self):
         """Create a mock for save_to_storage function."""
-        with mock.patch('bdm.finnhub.batch.reddit.subreddit_scraper.save_to_storage') as mock_save:
+        with mock.patch('bdm.ingestion.batch.reddit.subreddit_scraper.save_to_storage') as mock_save:
             yield mock_save
 
     @pytest.fixture
     def mock_count_media_stats(self):
         """Create a mock for count_media_stats function."""
-        with mock.patch('bdm.finnhub.batch.reddit.subreddit_scraper.count_media_stats') as mock_stats:
+        with mock.patch('bdm.ingestion.batch.reddit.subreddit_scraper.count_media_stats') as mock_stats:
             mock_stats.return_value = (1, 3)  # (posts_with_media, total_media_items)
             yield mock_stats
 
@@ -113,7 +113,7 @@ class TestClickOptions:
     @pytest.fixture
     def mock_main_function(self):
         """Create a mock for the main function."""
-        with mock.patch('bdm.finnhub.batch.reddit.subreddit_scraper.main') as mock_main:
+        with mock.patch('bdm.ingestion.batch.reddit.subreddit_scraper.main') as mock_main:
             yield mock_main
 
     @staticmethod

@@ -29,7 +29,7 @@ class TestSubredditScraperIntegration:
     @pytest.fixture
     def mock_reddit_api(self):
         """Mock the Reddit API interactions to avoid actual API calls."""
-        with mock.patch('bdm.finnhub.batch.reddit.reddit_api.get_reddit_client') as mock_client:
+        with mock.patch('bdm.ingestion.batch.reddit.reddit_api.get_reddit_client') as mock_client:
             # Configure the mock client
             mock_reddit = mock.MagicMock()
             mock_subreddit = mock.MagicMock()
@@ -65,7 +65,7 @@ class TestSubredditScraperIntegration:
     @pytest.fixture
     def mock_media_download(self):
         """Mock media downloads to avoid actual HTTP requests."""
-        with mock.patch('bdm.finnhub.batch.reddit.media_utils.download_media') as mock_download:
+        with mock.patch('bdm.ingestion.batch.reddit.media_utils.download_media') as mock_download:
             # Return None to simulate no media downloaded
             mock_download.return_value = None
             yield mock_download

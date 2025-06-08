@@ -15,7 +15,7 @@ class TestSubredditScraper:
     @pytest.fixture
     def mock_reddit_client(self):
         """Create a mock Reddit client."""
-        with mock.patch('bdm.finnhub.batch.reddit.reddit_api.get_reddit_client') as mock_client:
+        with mock.patch('bdm.ingestion.batch.reddit.reddit_api.get_reddit_client') as mock_client:
             # Configure the mock client
             mock_client.return_value = mock.MagicMock()
             yield mock_client.return_value
