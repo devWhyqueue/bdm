@@ -53,7 +53,7 @@ class TestSubredditScraper:
     @pytest.fixture
     def mock_extract_post_data(self):
         """Create a mock for extract_post_data function."""
-        with mock.patch('bdm.finnhub.batch.reddit.reddit_api.extract_post_data') as mock_extract:
+        with mock.patch('bdm.ingestion.batch.reddit.reddit_api.extract_post_data') as mock_extract:
             mock_extract.return_value = {'id': 'test_id', 'title': 'Test Title'}
             yield mock_extract
 
