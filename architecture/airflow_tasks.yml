@@ -18,7 +18,7 @@ services:
       context: ../bdm
       dockerfile: ingestion/batch/reddit/Dockerfile
     container_name: reddit_bitcoin_scraper
-    command: [ "python", "subreddit_scraper.py", "--help" ]
+    command: [ "--help" ]
 
   finnhub_bitcoin_news:
     image: finnhub-news-scraper
