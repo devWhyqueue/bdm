@@ -41,7 +41,7 @@ x-airflow-common: &airflow-common
   environment:
     <<: *airflow-common-env
   volumes:
-    - ../bdm/airflow/dags:/opt/airflow/dags
+    - ../bdm/airflow:/opt/airflow/dags
     - ./.airflow/logs:/opt/airflow/logs
     - ./.airflow/config:/opt/airflow/config
     - ./.airflow/plugins:/opt/airflow/plugins

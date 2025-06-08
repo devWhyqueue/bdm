@@ -10,13 +10,10 @@ MAX_RETRIES=10
 RETRY_INTERVAL=10
 echo "Checking readiness of dependent services..."
 for ((i=1; i<=MAX_RETRIES; i++)); do
-    # 1. Check MinIO health via curl
+    # Check MinIO health via curl
     if curl -s http://minio:9000/minio/health/live >/dev/null; then
-        # 2. Check if spark-iceberg:7077 is accepting TCP connections via /dev/tcp
-        if bash -c "</dev/tcp/spark-iceberg/7077" >/dev/null 2>&1; then
-            echo "Services are ready."
-            break
-        fi
+        echo "Services are ready."
+        break
     fi
 
     echo "Services not ready yet. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"

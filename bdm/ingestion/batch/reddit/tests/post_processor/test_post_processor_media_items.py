@@ -56,7 +56,7 @@ class TestProcessSingleMedia:
     @mock.patch('bdm.ingestion.batch.reddit.post_processor.download_media')
     @mock.patch('bdm.ingestion.batch.reddit.post_processor.upload_media_to_s3')
     def test_process_single_media_success(self, mock_upload, mock_download):
-        """Test successful processing of single media."""
+        """Test successful reddit of single media."""
         # Create a mock post
         mock_post = mock.Mock(spec=Submission)
         mock_post.url = "https://example.com/image.jpg"
@@ -142,7 +142,7 @@ class TestProcessGalleryImage:
     @mock.patch('bdm.ingestion.batch.reddit.post_processor.download_media')
     @mock.patch('bdm.ingestion.batch.reddit.post_processor.upload_media_to_s3')
     def test_process_gallery_image_success(self, mock_upload, mock_download):
-        """Test successful processing of gallery image."""
+        """Test successful reddit of gallery image."""
         # Configure mocks
         mock_download.return_value = ("image.jpg", "image/jpeg", b"content")
         mock_upload.return_value = "reddit/test/subreddit/images/image.jpg"

@@ -106,7 +106,7 @@ Each stream message example:
 Run the tests with:
 
 ```bash
-pytest bdm/ingestion/streaming/finazon/tests/
+pytest bdm/finnhub/streaming/finazon/tests/
 ```
 
 ## License

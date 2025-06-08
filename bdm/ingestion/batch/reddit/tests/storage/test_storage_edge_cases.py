@@ -93,7 +93,9 @@ class TestStorageEdgeCases:
         """Test that successful saves are logged properly."""
         posts = [{"id": "post1"}]
 
-        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client), mock.patch('bdm.ingestion.batch.reddit.storage.logger') as mock_logger:
+        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client',
+                        return_value=mock_minio_client), mock.patch(
+            'bdm.ingestion.batch.reddit.storage.logger') as mock_logger:
             save_to_storage(posts, "reddit-data", "askreddit", "hot", "", "")
 
             # Verify that the success was logged

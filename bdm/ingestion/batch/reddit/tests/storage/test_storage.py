@@ -1,5 +1,5 @@
 """
-Tests for the storage module in the Reddit batch ingestion system.
+Tests for the storage module in the Reddit batch finnhub system.
 """
 import json
 from unittest import mock
@@ -77,7 +77,9 @@ class TestSaveToStorage:
         posts = [{"id": "post1"}, {"id": "post2"}]
 
         # Patch get_minio_client to return our mock client
-        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client), mock.patch('bdm.ingestion.batch.reddit.storage.generate_filename') as mock_gen_filename:
+        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client',
+                        return_value=mock_minio_client), mock.patch(
+            'bdm.ingestion.batch.reddit.storage.generate_filename') as mock_gen_filename:
             mock_gen_filename.return_value = "reddit/daily/askreddit/20230401_123045.json"
 
             with mock.patch('bdm.ingestion.batch.reddit.storage.create_metadata') as mock_create_meta:

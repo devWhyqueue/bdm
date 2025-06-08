@@ -1,7 +1,7 @@
 -- Create 'reddit_posts' table, if it does not already exist:
 CREATE TABLE IF NOT EXISTS catalog.reddit_posts
 (
-    post_id             STRING    NOT NULL,
+    id STRING NOT NULL,
     title               STRING    NOT NULL,
     author              STRING    NOT NULL,
     created_utc         TIMESTAMP NOT NULL,

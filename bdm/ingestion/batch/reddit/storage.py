@@ -32,7 +32,7 @@ def create_metadata(subreddit: str, sort_by: str, time_filter: str, posts: List[
 
 
 def save_to_storage(posts: List[Dict[str, Any]], bucket: str, subreddit: str,
-                    sort_by: str, time_filter: str, prefix: str) -> None:
+                    sort_by: str, time_filter: str, prefix: str) -> str:
     """Save scraped posts to MinIO S3 storage."""
     try:
         s3_client = get_minio_client()
@@ -48,6 +48,7 @@ def save_to_storage(posts: List[Dict[str, Any]], bucket: str, subreddit: str,
         )
 
         logger.info("Successfully saved data to %s/%s", bucket, filename)
+        return filename
 
     except Exception as e:
         logger.error("Error saving to storage: %s", str(e))

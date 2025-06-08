@@ -1,5 +1,5 @@
 """
-Integration tests for the storage module in the Reddit batch ingestion system.
+Integration tests for the storage module in the Reddit batch finnhub system.
 """
 import json
 from unittest import mock
@@ -65,7 +65,7 @@ class TestStorageIntegration:
 
         # Save the data to storage
         with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
-            # Mock the media stats function to avoid any actual processing
+            # Mock the media stats function to avoid any actual reddit
             with mock.patch('bdm.ingestion.batch.reddit.storage.count_media_stats') as mock_count:
                 mock_count.return_value = (2, 3)  # 2 posts with media, 3 total media items
 

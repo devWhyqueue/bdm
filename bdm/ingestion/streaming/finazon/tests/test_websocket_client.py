@@ -94,13 +94,13 @@ class TestFinazonMarketDataProducer:
 
     @pytest.mark.asyncio
     async def test_handle_websocket_connection(self, producer, mock_websocket_connect, sample_market_data):
-        """Test handling WebSocket connection and processing messages."""
+        """Test handling WebSocket connection and reddit messages."""
         _, mock_websocket = mock_websocket_connect
 
         # Configure the mock to provide a message then raise an exception to exit the loop
         mock_websocket.__aiter__.return_value = [json.dumps(sample_market_data)]
 
-        # Mock the validation and processing methods
+        # Mock the validation and reddit methods
         with mock.patch.object(FinazonMarketDataProducer, '_validate_market_data', return_value=True) as mock_validate, \
                 mock.patch.object(producer, '_send_interpolated_price_ticks') as mock_process:
             await producer._handle_websocket_connection()
@@ -131,13 +131,13 @@ class TestFinazonMarketDataProducer:
         invalid_data = {"d": "us_stocks_essential"}
         mock_websocket.__aiter__.return_value = [json.dumps(invalid_data)]
 
-        # Mock the validation method to return False and the processing method
+        # Mock the validation method to return False and the reddit method
         with mock.patch.object(FinazonMarketDataProducer, '_validate_market_data', return_value=False) as mock_validate, \
                 mock.patch.object(producer, '_send_interpolated_price_ticks') as mock_process, \
                 mock.patch('logging.warning') as mock_logging:
             await producer._handle_websocket_connection()
 
-            # Assert the validation was called but processing was not
+            # Assert the validation was called but reddit was not
             mock_validate.assert_called_once_with(invalid_data)
             mock_process.assert_not_called()
 

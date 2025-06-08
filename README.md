@@ -7,12 +7,13 @@ Big data project for the BDM course at UPC.
 ```
 ├── architecture/       # Docker Compose files for the architecture
 ├── bdm/                # Source code for the project
-│   ├── airflow/        # Airflow configuration
-│       ├── dags/       # DAGs for the project
-│   ├── ingestion/      
+│   ├── airflow/        # Airflow DAGs for the project
+│   ├── ingestion/      # Landing zone
 │       ├── batch/      # Batch ingestion containers
 │       ├── streaming/  # Streaming ingestion containers
-│   ├── processing/     
+│   ├── processing/     # Trusted zone
+│       ├── iceberg/    # Creation of Iceberg tables
+│       ├── reddit/     # Reddit processing containers
 │       ├── streaming/  # Streaming processing containers
 ├── docker-compose.yml  # Main Docker Compose file
 |── .env                # Environment variables for the project

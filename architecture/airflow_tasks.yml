@@ -1,0 +1,37 @@
+services:
+  finazon_stream_btc_usdt:
+    image: finazon_stream
+    build:
+      context: ../bdm/ingestion/streaming/finazon
+      dockerfile: Dockerfile
+    container_name: finazon_stream_btc_usdt
+    command: [ "python", "websocket_client.py", "--price-ticks-topic", "btc_usdt_price_ticks", "--stream-topic", "btc_usdt_stream", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
+    environment:
+      - KAFKA_ENDPOINT=kafka:9092
+      - FINAZON_API_KEY=${FINAZON_API_KEY}
+    depends_on:
+      - kafka
+
+  reddit_bitcoin_ingestion:
+    image: subreddit-scraper
+    build:
+      context: ../bdm
+      dockerfile: ingestion/batch/reddit/Dockerfile
+    container_name: reddit_bitcoin_scraper
+    command: [ "--help" ]
+
+  finnhub_bitcoin_news:
+    image: finnhub-news-scraper
+    build:
+      context: ../bdm
+      dockerfile: ingestion/batch/finnhub/Dockerfile
+    container_name: finnhub_bitcoin_news_scraper
+    command: [ "python", "news_scraper.py", "--help" ]
+
+  reddit_data_processor:
+    image: reddit-data-processor
+    build:
+      context: ..
+      dockerfile: bdm/processing/reddit/Dockerfile
+    container_name: reddit_data_processor
+    command: [ "--help" ]
