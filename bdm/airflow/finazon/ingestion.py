@@ -12,7 +12,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    description='Orchestrate WebSocket streaming ingestion for asset data',
+    description='Orchestrate WebSocket streaming finnhub for asset data',
     schedule_interval='@hourly',
     start_date=datetime(2025, 3, 1),
     catchup=False,

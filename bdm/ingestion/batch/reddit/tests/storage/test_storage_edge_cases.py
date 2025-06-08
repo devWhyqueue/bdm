@@ -33,7 +33,7 @@ class TestStorageEdgeCases:
         posts = []
 
         # Mock the count_media_stats function
-        with mock.patch('bdm.ingestion.batch.reddit.storage.count_media_stats') as mock_count:
+        with mock.patch('bdm.finnhub.batch.reddit.storage.count_media_stats') as mock_count:
             mock_count.return_value = (0, 0)
 
             metadata = create_metadata("askreddit", "hot", "", posts)
@@ -50,7 +50,7 @@ class TestStorageEdgeCases:
         """Test creating metadata with controversial sort and time filter."""
         posts = [{"id": "post1"}]
 
-        with mock.patch('bdm.ingestion.batch.reddit.storage.count_media_stats') as mock_count:
+        with mock.patch('bdm.finnhub.batch.reddit.storage.count_media_stats') as mock_count:
             mock_count.return_value = (0, 0)
 
             metadata = create_metadata("askreddit", "controversial", "all", posts)
@@ -64,7 +64,7 @@ class TestStorageEdgeCases:
         """Test handling the case where the MinIO client fails to initialize."""
         posts = [{"id": "post1"}]
 
-        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client') as mock_get_client:
+        with mock.patch('bdm.finnhub.batch.reddit.storage.get_minio_client') as mock_get_client:
             # Simulate the client raising a ValueError (missing credentials)
             mock_get_client.side_effect = ValueError("MinIO credentials not found")
 
@@ -78,7 +78,7 @@ class TestStorageEdgeCases:
         """Test saving with an empty posts list."""
         posts = []
 
-        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
+        with mock.patch('bdm.finnhub.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
             save_to_storage(posts, "reddit-data", "askreddit", "hot", "", "daily")
 
             # Verify the MinIO client was called
@@ -93,7 +93,9 @@ class TestStorageEdgeCases:
         """Test that successful saves are logged properly."""
         posts = [{"id": "post1"}]
 
-        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client), mock.patch('bdm.ingestion.batch.reddit.storage.logger') as mock_logger:
+        with mock.patch('bdm.finnhub.batch.reddit.storage.get_minio_client',
+                        return_value=mock_minio_client), mock.patch(
+                'bdm.finnhub.batch.reddit.storage.logger') as mock_logger:
             save_to_storage(posts, "reddit-data", "askreddit", "hot", "", "")
 
             # Verify that the success was logged
@@ -106,10 +108,10 @@ class TestStorageEdgeCases:
         """Test that errors during save are logged properly."""
         posts = [{"id": "post1"}]
 
-        with mock.patch('bdm.ingestion.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
+        with mock.patch('bdm.finnhub.batch.reddit.storage.get_minio_client', return_value=mock_minio_client):
             mock_minio_client.put_object.side_effect = RuntimeError("S3 connection error")
 
-            with mock.patch('bdm.ingestion.batch.reddit.storage.logger') as mock_logger:
+            with mock.patch('bdm.finnhub.batch.reddit.storage.logger') as mock_logger:
                 with pytest.raises(RuntimeError):
                     save_to_storage(posts, "reddit-data", "askreddit", "hot", "", "")
 

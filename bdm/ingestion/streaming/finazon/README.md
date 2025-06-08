@@ -41,7 +41,7 @@ The following environment variables need to be set:
 ### Command Line
 
 ```bash
-python -m bdm.ingestion.streaming.finazon.websocket_client \
+python -m bdm.finnhub.streaming.finazon.websocket_client \
   --price-ticks-topic price_ticks \
   --stream-topic stream \
   --tickers AAPL,MSFT,GOOGL \
@@ -106,7 +106,7 @@ Each stream message example:
 Run the tests with:
 
 ```bash
-pytest bdm/ingestion/streaming/finazon/tests/
+pytest bdm/finnhub/streaming/finazon/tests/
 ```
 
 ## License

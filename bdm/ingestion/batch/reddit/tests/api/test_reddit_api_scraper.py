@@ -15,7 +15,7 @@ class TestSubredditScraper:
     @pytest.fixture
     def mock_reddit_client(self):
         """Create a mock Reddit client."""
-        with mock.patch('bdm.ingestion.batch.reddit.reddit_api.get_reddit_client') as mock_client:
+        with mock.patch('bdm.finnhub.batch.reddit.reddit_api.get_reddit_client') as mock_client:
             # Configure the mock client
             mock_client.return_value = mock.MagicMock()
             yield mock_client.return_value
@@ -47,13 +47,13 @@ class TestSubredditScraper:
     @pytest.fixture
     def mock_posts_generator(self):
         """Create a mock posts generator."""
-        with mock.patch('bdm.ingestion.batch.reddit.reddit_api.get_posts_generator') as mock_generator:
+        with mock.patch('bdm.finnhub.batch.reddit.reddit_api.get_posts_generator') as mock_generator:
             yield mock_generator
 
     @pytest.fixture
     def mock_extract_post_data(self):
         """Create a mock for extract_post_data function."""
-        with mock.patch('bdm.ingestion.batch.reddit.reddit_api.extract_post_data') as mock_extract:
+        with mock.patch('bdm.finnhub.batch.reddit.reddit_api.extract_post_data') as mock_extract:
             mock_extract.return_value = {'id': 'test_id', 'title': 'Test Title'}
             yield mock_extract
 
@@ -135,7 +135,7 @@ class TestSubredditScraper:
         mock_posts_generator.return_value = [mock_post]
 
         # Configure extract_post_data to raise an exception
-        with mock.patch('bdm.ingestion.batch.reddit.reddit_api.extract_post_data') as mock_extract:
+        with mock.patch('bdm.finnhub.batch.reddit.reddit_api.extract_post_data') as mock_extract:
             mock_extract.side_effect = Exception("Extraction error")
 
             # Assert that the error is propagated

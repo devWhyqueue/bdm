@@ -98,35 +98,25 @@ services:
   # ----------------------------------------------------------------------
   # Airflow task build services
   # ----------------------------------------------------------------------
-
   finazon_stream_btc_usdt:
-    image: finazon_stream
-    build:
-      context: ./bdm/ingestion/streaming/finazon
-      dockerfile: Dockerfile
-    container_name: finazon_stream_btc_usdt
-    command: [ "python", "websocket_client.py", "--price-ticks-topic", "btc_usdt_price_ticks", "--stream-topic", "btc_usdt_stream", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
-    environment:
-      - KAFKA_ENDPOINT=kafka:9092
-      - FINAZON_API_KEY=${FINAZON_API_KEY}
-    depends_on:
-      - kafka
+    extends:
+      file: ./architecture/airflow_tasks.yml
+      service: finazon_stream_btc_usdt
 
-  reddit_bitcoin:
-    image: subreddit-scraper
-    build:
-      context: .
-      dockerfile: bdm/ingestion/batch/reddit/Dockerfile
-    container_name: reddit_bitcoin_scraper
-    command: [ "python", "subreddit_scraper.py", "--help" ]
+  reddit_bitcoin_ingestion:
+    extends:
+      file: ./architecture/airflow_tasks.yml
+      service: reddit_bitcoin_ingestion
 
   finnhub_bitcoin_news:
-    image: finnhub-news-scraper
-    build:
-      context: .
-      dockerfile: bdm/ingestion/batch/finnhub/Dockerfile
-    container_name: finnhub_bitcoin_news_scraper
-    command: [ "python", "news_scraper.py", "--help" ]
+    extends:
+      file: ./architecture/airflow_tasks.yml
+      service: finnhub_bitcoin_news
+
+  reddit_data_processor:
+    extends:
+      file: ./architecture/airflow_tasks.yml
+      service: reddit_data_processor
 
   # ----------------------------------------------------------------------
   # Kafka services
@@ -181,64 +171,14 @@ services:
       - minio
 
   bitcoin-aggregator:
-    build:
-      context: bdm/processing/streaming/bitcoin_aggregator
-      dockerfile: Dockerfile
-    container_name: bitcoin-aggregator
-    environment:
-      - KAFKA_ENDPOINT=kafka:9092
-      - KAFKA_TOPIC=btc_usdt
-      - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET=landing-zone
-    depends_on:
-      - jobmanager
-      - taskmanager
-      - kafka
-      - minio
+    extends:
+      file: ./architecture/flink.yml
+      service: bitcoin-aggregator
 
   iceberg-init-runner:
-    image: bitnami/spark:3.5.6 # Use the same image as spark-iceberg for consistency
-    container_name: iceberg-init-runner
-    environment:
-      # Environment variables for S3A (MinIO) - same as spark-iceberg
-      - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET_TRUSTED_ZONE=trusted-zone
-    volumes:
-      - ./bdm/processing/iceberg:/opt/bitnami/spark/work/iceberg_scripts # Mount scripts
-      - ./architecture/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf # Mount custom Spark defaults
-    command: [ "bash", "/opt/bitnami/spark/work/iceberg_scripts/run_iceberg_init.sh" ]
-    depends_on:
-      minio:
-        condition: service_healthy
-      createbuckets:
-        condition: service_completed_successfully
-
-  spark-iceberg:
-    image: bitnami/spark:3.5.6 # Using bitnami image which comes with hadoop S3 support
-    container_name: spark-iceberg
-    environment:
-      - SPARK_MODE=master # Not strictly necessary for spark-sql, but good for a standalone cluster setup
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-      # Environment variables for S3A (MinIO)
-      - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET_TRUSTED_ZONE=trusted-zone # For clarity in scripts if needed
-    volumes:
-      - ./bdm/processing/iceberg:/opt/bitnami/spark/work/iceberg_scripts # Mount scripts
-      - ./architecture/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf # Mount custom Spark defaults
-    depends_on:
-      minio:
-        condition: service_healthy
-      createbuckets: # Ensure buckets are created before Spark might try to access them
-        condition: service_completed_successfully
+    extends:
+      file: ./architecture/iceberg.yml
+      service: iceberg-init-runner
 
   nginx:
     image: nginx:latest

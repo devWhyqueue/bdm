@@ -46,3 +46,21 @@ services:
     volumes:
       - flink-checkpoints:/opt/flink/checkpoints
       - flink-usrlib:/opt/flink/usrlib
+
+  bitcoin-aggregator:
+    build:
+      context: ../bdm/processing/streaming/bitcoin_aggregator
+      dockerfile: Dockerfile
+    container_name: bitcoin-aggregator
+    environment:
+      - KAFKA_ENDPOINT=kafka:9092
+      - KAFKA_TOPIC=btc_usdt
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=landing-zone
+    depends_on:
+      - jobmanager
+      - taskmanager
+      - kafka
+      - minio

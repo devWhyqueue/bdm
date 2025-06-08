@@ -1,15 +1,15 @@
 FROM python:3.12-slim
-
 WORKDIR /app
 
-# Copy project
-COPY bdm/ ./bdm/
+# 1) Copy the inner bdm folder (your context) into /app/bdm
+COPY . /app/bdm
 
-# Install dependencies
-RUN pip install --no-cache-dir -r bdm/ingestion/batch/finnhub/requirements.txt
+# 2) Install requirements from the newly-copied path
+RUN pip install --no-cache-dir \
+      -r /app/bdm/ingestion/batch/finnhub/requirements.txt
 
-# Set PYTHONPATH so Python can resolve the package
+# 3) Make /app the import root, so 'import bdm...' works
 ENV PYTHONPATH=/app
 
-# Run the script
-ENTRYPOINT ["python", "bdm/ingestion/batch/finnhub/news_scraper.py"]
+# 4) Invoke as a module
+ENTRYPOINT ["python", "-m", "bdm.ingestion.batch.finnhub.news_scraper"]

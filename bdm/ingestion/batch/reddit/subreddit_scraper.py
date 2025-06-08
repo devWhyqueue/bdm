@@ -48,7 +48,7 @@ def main(subreddit: str, limit: int, sort_by: str, time_filter: str,
             logger.info("Media downloading disabled by --skip-media flag")
 
         posts = scrape_subreddit(subreddit, sort_by, time_filter, limit, bucket, prefix)
-        save_to_storage(posts, bucket, subreddit, sort_by, time_filter, prefix)
+        filename = save_to_storage(posts, bucket, subreddit, sort_by, time_filter, prefix)
 
         # Log media statistics
         posts_with_media, total_media_items = count_media_stats(posts)
@@ -57,6 +57,7 @@ def main(subreddit: str, limit: int, sort_by: str, time_filter: str,
                         posts_with_media, len(posts), total_media_items)
 
         logger.info("Subreddit scraper completed successfully")
+        print(filename)  # Print the filename to stdout
     except Exception as e:
         logger.error("Script failed: %s", str(e))
         raise
