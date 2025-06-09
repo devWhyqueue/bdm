@@ -5,13 +5,13 @@ from typing import Optional
 
 from pyspark.sql import SparkSession, DataFrame
 
-from bdm.processing.reddit.spark_io import (
+from bdm.processing.reddit.spark_processing.spark_io import (
     ICEBERG_TABLE_NAME,
     create_spark_session,
     read_raw_text_files_with_source,
     write_df_to_iceberg,
 )
-from bdm.processing.reddit.spark_transformations import (
+from bdm.processing.reddit.spark_processing.transformations import (
     validate_and_parse_raw_df,
     extract_and_explode_posts_df,
     clean_and_prepare_final_df,

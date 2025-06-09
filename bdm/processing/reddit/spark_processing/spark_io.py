@@ -6,7 +6,7 @@ from pyspark.sql import SparkSession, DataFrame, Window
 from pyspark.sql.functions import col, lit, regexp_extract, input_file_name, row_number
 from pyspark.sql.types import StructType, StructField, StringType
 
-from .utils import calculate_sha256_checksum, datetime_to_iso_utc, CHECKSUM_KEY_ORDER
+from bdm.processing.reddit.utils import (calculate_sha256_checksum, datetime_to_iso_utc, CHECKSUM_KEY_ORDER)
 
 logger = logging.getLogger(__name__)
 

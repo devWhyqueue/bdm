@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from bdm.ingestion.batch.utils import get_minio_client
+from bdm.utils import get_minio_client
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +109,7 @@ def download_media(url: str, media_type: str) -> Optional[Tuple[str, str, bytes]
         content_type = get_content_type(file_extension)
 
         logger.info("Downloading media from %s", url)
+        url = f"{url}/DASH_720{file_extension}" if media_type == 'video' else url
         response = requests.get(url, timeout=30)
         response.raise_for_status()
 

@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Any, List
 
 from bdm.ingestion.batch.reddit.post_processor import count_media_stats
-from bdm.ingestion.batch.utils import get_minio_client
+from bdm.utils import get_minio_client
 
 logger = logging.getLogger(__name__)
 

@@ -16,14 +16,14 @@ DEFAULT_DOCKER_IMAGE_NAME = "reddit-data-processor:latest"
 
 # Path to the main Python script inside the Docker image
 # Assumes the Docker image is built with the bdm code at this location.
-SPARK_APP_PYTHON_FILE = "/opt/bitnami/spark/work/bdm/processing/reddit/process_reddit_data.py"
+SPARK_APP_PYTHON_FILE = "/opt/bitnami/spark/work/bdm/processing/reddit/spark_processing/process_reddit_data.py"
 
 env_vars = {
     'MINIO_ENDPOINT': '{{ conn.s3.extra_dejson.host }}',
     'MINIO_ACCESS_KEY': '{{ conn.s3.login }}',
     'MINIO_SECRET_KEY': '{{ conn.s3.password }}',
-    'MINIO_BUCKET': 'trusted-zone', # This is for the Iceberg table, not media.
-    'PROCESSED_ZONE_BUCKET': '{{ params.processed_zone_bucket }}',
+    'MINIO_LANDING_BUCKET': 'landing-zone',
+    'MINIO_TRUSTED_BUCKET': 'trusted-zone',
 }
 
 # Default arguments for the DAG
@@ -63,12 +63,6 @@ default_args = {
             type="string",
             title="Docker Image",
             description="Docker image for the Spark Reddit processor (e.g., 'myimage:tag')."
-        ),
-        "processed_zone_bucket": Param(
-            "processed-zone", # Default value
-            type="string",
-            title="Processed Zone Bucket",
-            description="S3/MinIO bucket name for storing processed media files."
         ),
     }
 )

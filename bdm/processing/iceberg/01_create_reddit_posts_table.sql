@@ -1,9 +1,4 @@
--- Drop the table if it exists to ensure schema update (for dev/testing purposes)
--- In production, you might use ALTER TABLE for some schema changes if supported and non-breaking.
--- However, for complex type additions like ARRAY<STRUCT>, recreating might be simpler
--- if the table can be repopulated. Given this is an initial setup, DROP/CREATE is fine.
 DROP TABLE IF EXISTS catalog.reddit_posts;
-
 CREATE TABLE IF NOT EXISTS catalog.reddit_posts (
   id                     STRING   NOT NULL,
   title                  STRING   NOT NULL,
@@ -37,7 +32,3 @@ CREATE TABLE IF NOT EXISTS catalog.reddit_posts (
 )
 USING iceberg
 PARTITIONED BY (days(scraped_at));
-
--- Optional: Add a comment to the table or columns for documentation
--- COMMENT ON TABLE catalog.reddit_posts IS 'Stores processed Reddit post data, including media item metadata.';
--- COMMENT ON COLUMN catalog.reddit_posts.media_items IS 'Array of processed media items associated with the post. Media files stored in a separate S3 location.';
