@@ -8,9 +8,9 @@ USER root
 RUN useradd -m -u 1001 -s /bin/bash spark && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-      ffmpeg \
-      imagemagick \
-      libmagic1 && \
+      ffmpeg=7:4.* \
+      imagemagick=8:6.* \
+      libmagic1=1:5.* && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /tmp/.ivy2 && \
     chown spark:spark /tmp/.ivy2
