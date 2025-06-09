@@ -6,16 +6,12 @@ from pyspark.sql import SparkSession, DataFrame, Window
 from pyspark.sql.functions import col, lit, regexp_extract, input_file_name, row_number
 from pyspark.sql.types import StructType, StructField, StringType
 
-# Import the shared function
-from bdm.utils import create_spark_session
 from bdm.processing.reddit.utils import (calculate_sha256_checksum, datetime_to_iso_utc, CHECKSUM_KEY_ORDER)
 
 logger = logging.getLogger(__name__)
 
 ICEBERG_TABLE_NAME = "catalog.reddit_posts"  # Default Iceberg table name
 
-
-# Remove local definition of create_spark_session
 
 def read_raw_text_files_with_source(spark: SparkSession, input_s3_path_glob: str) -> DataFrame:
     """Reads raw text files from the given path and adds a source_file_name column."""
@@ -38,64 +34,39 @@ def read_raw_text_files_with_source(spark: SparkSession, input_s3_path_glob: str
         return spark.createDataFrame([], schema)
 
 
-def write_df_to_iceberg(spark: SparkSession, posts: DataFrame, table: str, source: str, ) -> bool:
+def write_df_to_iceberg(spark: SparkSession, posts: DataFrame, table: str, source: str) -> bool:
     """
-    Upsert *posts* into an Iceberg *table*.
-
-    The newest record for each ``id`` is kept (latest ``scraped_at`` →
-    ``created_utc`` → ``title``). The merged result overwrites the target
-    table atomically, relying on Iceberg semantics.
+    Upsert posts into an Iceberg table, keeping only the newest record per id.
     """
-    if posts is None or posts.isEmpty():
+    if posts is None or posts.rdd.isEmpty():
         logger.info("No rows in %s — skipping upsert.", source)
         return True
 
     try:
-        latest = posts.withColumn(
-            "_rn",
-            row_number().over(
-                Window.partitionBy("id").orderBy(
-                    col("scraped_at").desc(),
-                    col("created_utc").desc(),
-                    col("title"),
-                )
-            )
-        ).filter(col("_rn") == 1).drop("_rn").cache()
+        win = Window.partitionBy("id").orderBy(
+            col("scraped_at").desc(), col("created_utc").desc(), col("title")
+        )
 
-        merged = latest.unionByName(
-            spark.table(table), allowMissingColumns=True
-        ).withColumn(
-            "_rn",
-            row_number().over(
-                Window.partitionBy("id").orderBy(
-                    col("scraped_at").desc(),
-                    col("created_utc").desc(),
-                    col("title"),
-                )
-            )
-        ).filter(col("_rn") == 1).drop("_rn")
+        latest = posts.withColumn("_rn", row_number().over(win)) \
+            .filter("_rn = 1").drop("_rn")
+
+        merged = (
+            spark.table(table)
+            .unionByName(latest, allowMissingColumns=True)
+            .withColumn("_rn", row_number().over(win))
+            .filter("_rn = 1").drop("_rn")
+        )
 
         merged.write.mode("overwrite") \
             .option("write.distribution-mode", "hash") \
             .saveAsTable(table)
 
-        logger.info(
-            "Merged %d rows from %s into %s.",
-            latest.count(), source, table
-        )
+        logger.info("Merged %d rows from %s into %s.", latest.count(), source, table)
         return True
 
-    except Exception as exc:
-        logger.error(
-            "Upsert from %s into %s failed: %s",
-            source, table, exc,
-            exc_info=True
-        )
+    except Exception:
+        logger.exception("Upsert from %s into %s failed", source, table)
         return False
-
-    finally:
-        if "latest" in locals():
-            latest.unpersist(False)
 
 
 def _reconstruct_checksum_payload(row_dict: Dict[str, Any]) -> Dict[str, Any]:

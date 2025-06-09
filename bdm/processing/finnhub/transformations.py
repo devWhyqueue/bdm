@@ -1,28 +1,28 @@
+import hashlib
 import json
 import logging
-import hashlib
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, List
 
 import pyspark.sql.functions as F
-from pyspark.sql import DataFrame
-from pyspark.sql.types import StringType, TimestampType, Row, ArrayType, BooleanType
-
 from jsonschema import validate as validate_jsonschema
 from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
+from pyspark.sql import DataFrame
+from pyspark.sql.types import StringType, TimestampType, Row, ArrayType
 
+from bdm.processing.finnhub.article_processor import (
+    validate_and_clean_article,
+    deduplicate_articles,
+)
 from bdm.processing.finnhub.schemas import (
     FINNHUB_FILE_SCHEMA,
     FINNHUB_ARTICLE_SPARK_SCHEMA,
     SPARK_RAW_FINNHUB_FILE_SCHEMA,
     CLEANED_ARTICLE_STRUCT_SCHEMA,
 )
-from bdm.processing.finnhub.article_processor import (
-    validate_and_clean_article,
-    deduplicate_articles,
-)
 
 logger = logging.getLogger(__name__)
+
 
 def parse_datetime_string(datetime_str: Optional[str]) -> Optional[datetime]:
     if not datetime_str:
@@ -37,9 +37,10 @@ def parse_datetime_string(datetime_str: Optional[str]) -> Optional[datetime]:
         logger.error(f"Could not parse datetime string: {datetime_str}")
         return None
 
+
 @F.udf(returnType=StringType())
 def validate_raw_json_file_udf(json_string: str) -> Optional[str]:
-    '''Validates a raw JSON string against FINNHUB_FILE_SCHEMA.'''
+    """Validates a raw JSON string against FINNHUB_FILE_SCHEMA."""
     try:
         data = json.loads(json_string)
         validate_jsonschema(instance=data, schema=FINNHUB_FILE_SCHEMA)
@@ -54,6 +55,7 @@ def validate_raw_json_file_udf(json_string: str) -> Optional[str]:
         logger.error(f"Unexpected error during raw file validation: {e}")
         return None
 
+
 @F.udf(returnType=TimestampType())
 def parse_metadata_scraped_at_udf(metadata_struct: Row) -> Optional[datetime]:
     if not metadata_struct:
@@ -64,9 +66,9 @@ def parse_metadata_scraped_at_udf(metadata_struct: Row) -> Optional[datetime]:
 
 @F.udf(returnType=ArrayType(CLEANED_ARTICLE_STRUCT_SCHEMA))
 def validate_clean_and_deduplicate_articles_udf(
-    raw_articles_list: List[Row],
-    metadata_category: str,
-    scraped_at_dt: datetime
+        raw_articles_list: List[Row],
+        metadata_category: str,
+        scraped_at_dt: datetime
 ) -> Optional[List[Dict[str, Any]]]:
     if not raw_articles_list or not metadata_category or not scraped_at_dt:
         return None
@@ -110,11 +112,12 @@ def generate_checksum(article_data: Dict[str, Any], scraped_at_iso: str, source_
     serialized_payload = json.dumps(checksum_payload, sort_keys=True, separators=(',', ':'))
     return hashlib.sha256(serialized_payload.encode('utf-8')).hexdigest()
 
+
 @F.udf(returnType=FINNHUB_ARTICLE_SPARK_SCHEMA)
 def apply_checksum_and_final_fields_udf(
-    cleaned_article_struct: Row,
-    scraped_at_datetime: datetime,
-    source_file: str
+        cleaned_article_struct: Row,
+        scraped_at_datetime: datetime,
+        source_file: str
 ) -> Optional[Dict[str, Any]]:
     if not cleaned_article_struct:
         return None
@@ -166,7 +169,9 @@ def validate_and_parse_raw_df(raw_text_df_with_source: DataFrame) -> DataFrame:
         F.col("value").alias("original_file_content")
     )
 
-def extract_clean_and_transform_articles_df(parsed_df: DataFrame) -> Optional[DataFrame]:
+
+def _parse_metadata_fields(parsed_df: DataFrame) -> Optional[DataFrame]:
+    """Parses metadata fields and applies initial filtering."""
     metadata_parsed_df = parsed_df.withColumn(
         "scraped_at_dt", parse_metadata_scraped_at_udf(F.col("metadata"))
     ).withColumn(
@@ -176,10 +181,14 @@ def extract_clean_and_transform_articles_df(parsed_df: DataFrame) -> Optional[Da
     ).filter(F.col("scraped_at_dt").isNotNull() & F.col("metadata_category_str").isNotNull())
 
     if metadata_parsed_df.isEmpty():
-        logger.warning("No data after parsing scraped_at_dt or metadata_category_str from metadata.")
+        logger.warning("No data after parsing scraped_at_dt or metadata_category_str.")
         return None
+    return metadata_parsed_df
 
-    cleaned_articles_exploded_df = metadata_parsed_df.withColumn(
+
+def _apply_article_cleaning_udf(metadata_parsed_df: DataFrame) -> Optional[DataFrame]:
+    """Applies article cleaning UDF and filters empty results."""
+    cleaned_articles_df = metadata_parsed_df.withColumn(
         "cleaned_article_struct_list",
         validate_clean_and_deduplicate_articles_udf(
             F.col("news_articles_raw_list"),
@@ -188,34 +197,37 @@ def extract_clean_and_transform_articles_df(parsed_df: DataFrame) -> Optional[Da
         )
     ).filter(F.col("cleaned_article_struct_list").isNotNull() & (F.size(F.col("cleaned_article_struct_list")) > 0))
 
-    if cleaned_articles_exploded_df.isEmpty():
-        logger.warning("No articles remaining after validation, cleaning, and deduplication list processing.")
+    if cleaned_articles_df.isEmpty():
+        logger.warning("No articles after validation, cleaning, and deduplication.")
         return None
+    return cleaned_articles_df
 
-    count_consistency_df = cleaned_articles_exploded_df.withColumn(
+
+def _perform_count_consistency_check(cleaned_articles_df: DataFrame) -> Optional[DataFrame]:
+    """Performs count consistency check and logs skipped files."""
+    count_consistency_df = cleaned_articles_df.withColumn(
         "N_cleaned", F.size(F.col("cleaned_article_struct_list"))
     )
-
     valid_count_df = count_consistency_df.filter(
         F.col("N_cleaned") >= (F.col("metadata_article_count") / 2.0)
     )
-
     skipped_count_df = count_consistency_df.filter(
         F.col("N_cleaned") < (F.col("metadata_article_count") / 2.0)
     )
     if not skipped_count_df.isEmpty():
-        skipped_files = skipped_count_df.select("source_file_name", "N_cleaned", "metadata_article_count").collect()
-        for row in skipped_files:
+        for row in skipped_count_df.select("source_file_name", "N_cleaned", "metadata_article_count").collect():
             logger.warning(
                 f"File {row.source_file_name}: N_cleaned ({row.N_cleaned}) "
-                f"< metadata_article_count / 2 ({row.metadata_article_count / 2.0}). "
-                f"Skipping insertion for this file."
+                f"< metadata_article_count / 2 ({row.metadata_article_count / 2.0}). Skipping."
             )
-
     if valid_count_df.isEmpty():
-        logger.warning("No files passed the record-count consistency check.")
+        logger.warning("No files passed record-count consistency check.")
         return None
+    return valid_count_df
 
+
+def _explode_articles_and_select_final_fields(valid_count_df: DataFrame) -> Optional[DataFrame]:
+    """Explodes articles and selects final DataFrame fields."""
     exploded_df = valid_count_df.select(
         F.col("source_file_name").alias("source_file"),
         F.col("scraped_at_dt"),
@@ -223,12 +235,25 @@ def extract_clean_and_transform_articles_df(parsed_df: DataFrame) -> Optional[Da
         F.col("N_cleaned"),
         F.explode(F.col("cleaned_article_struct_list")).alias("cleaned_article_struct")
     )
-
     if exploded_df.isEmpty():
-        logger.warning("No articles after exploding the cleaned list. This is unexpected.")
+        logger.warning("No articles after exploding. This is unexpected.")
         return None
-
     return exploded_df
+
+
+def extract_clean_and_transform_articles_df(parsed_df: DataFrame) -> Optional[DataFrame]:
+    """Extracts, cleans, and transforms articles from a parsed DataFrame."""
+    metadata_df = _parse_metadata_fields(parsed_df)
+    if metadata_df is None: return None
+
+    cleaned_df = _apply_article_cleaning_udf(metadata_df)
+    if cleaned_df is None: return None
+
+    consistent_df = _perform_count_consistency_check(cleaned_df)
+    if consistent_df is None: return None
+
+    final_df = _explode_articles_and_select_final_fields(consistent_df)
+    return final_df
 
 
 def prepare_final_df(transformed_df: DataFrame) -> Optional[DataFrame]:

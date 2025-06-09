@@ -12,7 +12,6 @@ env_vars = {
     'MINIO_ENDPOINT': '{{ conn.s3.extra_dejson.host }}',
     'MINIO_ACCESS_KEY': '{{ conn.s3.login }}',
     'MINIO_SECRET_KEY': '{{ conn.s3.password }}',
-    'MINIO_LANDING_BUCKET': 'landing-zone',
     'MINIO_TRUSTED_BUCKET': 'trusted-zone',
 }
 
@@ -29,26 +28,18 @@ dag_doc_md = """
 ### Finnhub Trusted Zone Processing DAG
 Orchestrates the processing of Finnhub news data from the landing zone
 to the trusted zone using a Spark job running in Docker.
-Input path should be templated.
-Example: `s3a://landing-zone/finnhub/{{ execution_date.strftime('%Y/%m/%d') }}/*.json`
-The actual input path is provided via `dag_run.conf.input_path_glob`.
+Input path is provided via `dag_run.conf.input_filename` and `dag_run.conf.landing_zone_bucket`.
 """
 
 @dag(
     dag_id="finnhub_processing",
     default_args=default_args,
     start_date=pendulum.datetime(2023, 1, 1, tz="UTC"),
-    schedule=None,
+    schedule=None,  # Triggered DAG
     catchup=False,
     tags=["finnhub", "processing", "trusted-zone", "spark", "docker"],
     doc_md=dag_doc_md,
     params={
-        "input_path_glob": Param(
-            "s3a://landing-zone/finnhub/YYYY/MM/DD/*.json",
-            type="string",
-            title="Input Path Glob",
-            description="S3 glob pattern for input Finnhub JSON files."
-        ),
         "docker_image": Param(
             DEFAULT_DOCKER_IMAGE_NAME,
             type="string",
@@ -58,16 +49,23 @@ The actual input path is provided via `dag_run.conf.input_path_glob`.
     }
 )
 def finnhub_processing_dag():
-    task_doc_md = """
+    # Construct input_path from dag_run.conf if available, otherwise params might be used as a fallback for manual runs
+    # For triggered runs, dag_run.conf.input_filename and dag_run.conf.landing_zone_bucket are expected.
+    input_file_path = (
+        "s3a://{{ dag_run.conf.get('landing_zone_bucket', 'landing-zone') }}/"
+        "{{ dag_run.conf.get('input_filename', '') }}"
+    )
+
+    task_doc_md = f"""
     #### Run Spark Finnhub Processor Task
-    Executes the `process_finnhub_data.py` Spark application.
+    Executes the `{SPARK_APP_PYTHON_FILE}` Spark application.
     - **Docker Image**: `{{ params.docker_image }}`
-    - **Input Path**: `{{ params.input_path_glob }}`
+    - **Input Path**: `{input_file_path}` (Dynamically set from trigger)
     """
 
     command = [
         SPARK_APP_PYTHON_FILE,
-        "--input-path", "{{ params.input_path_glob }}"
+        "--input-path", input_file_path
     ]
 
     DockerOperator(
