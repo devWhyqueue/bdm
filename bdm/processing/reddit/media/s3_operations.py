@@ -72,13 +72,10 @@ def upload_s3_file(local_file_path: str, object_key: str, content_type: Optional
 
 def construct_processed_s3_url(original_s3_key_relative: str, new_format_extension: str) -> Tuple[str, str]:
     """Constructs the S3 URL and key for a processed media item in the trusted bucket."""
-    base_path, original_filename = os.path.split(original_s3_key_relative)
-    base_filename, _ = os.path.splitext(original_filename)
-    new_filename = f"{base_filename}_processed.{new_format_extension}"
-    processed_key_relative = os.path.join("processed_media", base_path.lstrip('/'), new_filename).replace("\\", "/")
+    from conversion_utils import construct_processed_s3_url as shared_construct_processed_s3_url
 
     if not MINIO_TRUSTED_BUCKET:
         logger.critical("MINIO_TRUSTED_BUCKET not configured for URL construction.")
         raise ValueError("MINIO_TRUSTED_BUCKET is not configured.")
-    full_s3_url = f"s3a://{MINIO_TRUSTED_BUCKET}/{processed_key_relative}"
-    return full_s3_url, processed_key_relative
+
+    return shared_construct_processed_s3_url(original_s3_key_relative, new_format_extension)
