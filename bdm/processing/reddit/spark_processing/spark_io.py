@@ -6,6 +6,8 @@ from pyspark.sql import SparkSession, DataFrame, Window
 from pyspark.sql.functions import col, lit, regexp_extract, input_file_name, row_number
 from pyspark.sql.types import StructType, StructField, StringType
 
+# Import the shared function
+from bdm.utils import create_spark_session
 from bdm.processing.reddit.utils import (calculate_sha256_checksum, datetime_to_iso_utc, CHECKSUM_KEY_ORDER)
 
 logger = logging.getLogger(__name__)
@@ -13,14 +15,7 @@ logger = logging.getLogger(__name__)
 ICEBERG_TABLE_NAME = "catalog.reddit_posts"  # Default Iceberg table name
 
 
-def create_spark_session(app_name: str = "RedditProcessingSpark") -> SparkSession:
-    """Creates and returns a Spark session configured for Iceberg."""
-    spark = SparkSession.builder.appName(app_name) \
-        .config("spark.sql.catalog.iceberg.warehouse", "s3a://trusted-zone/iceberg_catalog/") \
-        .getOrCreate()
-    logger.info(f"Spark session '{app_name}' created.")
-    return spark
-
+# Remove local definition of create_spark_session
 
 def read_raw_text_files_with_source(spark: SparkSession, input_s3_path_glob: str) -> DataFrame:
     """Reads raw text files from the given path and adds a source_file_name column."""

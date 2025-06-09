@@ -35,3 +35,31 @@ services:
       dockerfile: bdm/processing/reddit/Dockerfile
     container_name: reddit_data_processor
     command: [ "--help" ]
+
+  finnhub-data-processor:
+    container_name: finnhub_data_processor
+    build:
+      context: ../bdm/processing/finnhub # Corrected context
+      dockerfile: Dockerfile
+    image: finnhub-data-processor:${DOCKER_IMAGE_TAG:-latest}
+    depends_on:
+      - spark-master
+      - minio
+    networks:
+      - bdm_default
+    environment:
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - PYTHONUNBUFFERED=1
+      # MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY will be injected by Airflow DockerOperator
+      # The DockerOperator in Airflow will pass these from the Airflow connection (e.g., 's3_default' or a custom one)
+      # So, they don't strictly need to be in this docker-compose override if the DockerOperator handles them.
+      # However, having them here (commented out or with placeholders) can be useful for direct docker-compose up tests.
+      # MINIO_ENDPOINT: http://minio:9000
+      # MINIO_ACCESS_KEY: minioadmin
+      # MINIO_SECRET_KEY: minioadmin
+    # Volumes might be needed if local directories are mapped into the Spark job for specific reasons,
+    # but typically not for jobs reading/writing to S3.
+    # Example:
+    # volumes:
+    #   - ./bdm/processing/finnhub:/opt/bitnami/spark/work/bdm/processing/finnhub
+    # The Dockerfile already copies the necessary code, so this might be redundant unless for live dev.

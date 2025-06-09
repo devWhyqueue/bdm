@@ -1,0 +1,12 @@
+# Spark / PySpark is provided by the base Docker image
+# pyspark
+
+# JSON schema validation
+jsonschema
+
+# Add other specific dependencies if any are imported in the finnhub processing scripts
+# For example, if using a specific library for HTTP requests, etc.
+# For now, keeping it minimal based on current imports.
+# boto3 is often needed for S3 interaction if not using Hadoop S3A committer fully managed by Spark's classpath
+# However, if Spark is configured with S3A connector and Hadoop AWS bundle, explicit boto3 might not be needed here.
+# Let's assume it's handled by Spark's Hadoop integration for now.
