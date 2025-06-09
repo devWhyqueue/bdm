@@ -5,15 +5,17 @@ USER root
 
 # 0) Create a real spark user with UID=1001 and home directory
 # 1) Install FFmpeg & ImageMagick and prepare Ivy cache dir
-RUN useradd -m -u 1001 -s /bin/bash spark && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-      ffmpeg=7:4.* \
-      imagemagick=8:6.* \
-      libmagic1=1:5.* && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /tmp/.ivy2 && \
-    chown spark:spark /tmp/.ivy2
+RUN \
+  useradd -m -u 1001 -s /bin/bash spark && \
+  apt-get update && \
+  apt-get install -y --no-install-recommends \
+    ffmpeg=7:5.1.6-0+deb12u1 \
+    imagemagick=8:6.9.11.60+dfsg-1.6+deb12u3 \
+    libmagic1=1:5.44-3 && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* && \
+  mkdir -p /tmp/.ivy2 && \
+  chown spark:spark /tmp/.ivy2
 
 # 3) Switch to the newly created spark user
 USER spark
