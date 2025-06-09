@@ -210,12 +210,14 @@ def process_single_media_item(media_item: Dict[str, Any], source_file_name_for_l
             _run_validation_and_download(output_item, media_item, source_file_name_for_logging)
         temp_dir = temp_dir_val
         if output_item.get("validation_error"): return output_item
-        assert local_input_path and declared_type and temp_dir and s3_url_rel, "Validation step failed unexpectedly"
+        if not (local_input_path and declared_type and temp_dir and s3_url_rel):
+            raise AssertionError("Validation step failed unexpectedly")
 
         local_output_path, target_format, target_content_type = \
             _run_conversion(output_item, local_input_path, declared_type, original_filename, temp_dir)
         if output_item.get("conversion_error"): return output_item
-        assert local_output_path and target_format and target_content_type, "Conversion step failed unexpectedly"
+        if not (local_output_path and target_format and target_content_type):
+            raise AssertionError("Conversion step failed unexpectedly")
 
         _run_upload_and_verification(output_item, local_output_path, s3_url_rel, target_format, target_content_type)
 
