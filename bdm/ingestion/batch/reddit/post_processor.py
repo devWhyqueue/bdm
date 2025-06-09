@@ -16,7 +16,7 @@ def create_media_item(media_type: str, s3_key: str, url: str,
     """Create a media item dictionary."""
     media_item = {
         'media_type': media_type,
-        's3_url': s3_key,
+        'lz_url': s3_key,
         'source_url': url,
         'filename': filename,
         'content_type': content_type

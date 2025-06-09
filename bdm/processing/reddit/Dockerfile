@@ -1,22 +1,35 @@
 FROM bitnami/spark:3.5.6
-
 WORKDIR /app
 
-# 0) Copy spark-defaults.conf into the Spark conf dir
+USER root
+
+# 0) Create a real spark user with UID=1001 and home directory
+# 1) Install FFmpeg & ImageMagick and prepare Ivy cache dir
+RUN \
+  useradd -m -u 1001 -s /bin/bash spark && \
+  apt-get update && \
+  apt-get install -y --no-install-recommends \
+    ffmpeg=7:5.1.6-0+deb12u1 \
+    imagemagick=8:6.9.11.60+dfsg-1.6+deb12u3 \
+    libmagic1=1:5.44-3 && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* && \
+  mkdir -p /tmp/.ivy2 && \
+  chown spark:spark /tmp/.ivy2
+
+# 3) Switch to the newly created spark user
+USER spark
+ENV HOME=/home/spark
+
+# 4) Copy configs and install Python deps
 COPY architecture/spark-defaults.conf /opt/bitnami/spark/conf/spark-defaults.conf
-
-# 1) Copy the entire `bdm` package into /app/bdm
 COPY ./bdm /app/bdm
-
-# 2) Copy and install this service’s Python deps
 COPY bdm/processing/reddit/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# 3) Make /app the import root, so `import bdm…` works
+# 5) Make /app importable
 ENV PYTHONPATH=/app
 
-# 4) Launch your Spark job as a module under /app/bdm
-ENTRYPOINT ["spark-submit", "/app/bdm/processing/reddit/process_reddit_data.py"]
-
-# 5) Allow Airflow (or you) to append extra flags
+# 6) Launch Spark with Ivy cache set
+ENTRYPOINT ["spark-submit", "--conf", "spark.jars.ivy=/tmp/.ivy2", "/app/bdm/processing/reddit/spark_processing/process_reddit_data.py"]
 CMD []
