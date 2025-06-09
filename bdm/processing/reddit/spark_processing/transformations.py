@@ -180,7 +180,7 @@ def process_media_udf(media_array: Optional[list], source_file_name: str) -> Opt
                     processed_item_dict.get("validation_error") is None and
                     processed_item_dict.get("conversion_error") is None and
                     processed_item_dict.get("size_error") is None and
-                    processed_item_dict.get("processed_s3_url") is not None
+                    processed_item_dict.get("tz_url") is not None
             ):
                 final_processed_item = {}
                 for field in MEDIA_ITEM_SCHEMA.fields:
