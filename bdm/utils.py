@@ -1,7 +1,11 @@
+import logging
 import os
 
 import boto3
 from botocore.config import Config
+from pyspark.sql import SparkSession
+
+logger = logging.getLogger(__name__)
 
 
 def get_minio_client() -> boto3.client:
@@ -21,3 +25,11 @@ def get_minio_client() -> boto3.client:
         config=Config(signature_version='s3v4'),
         region_name='us-east-1'
     )
+
+def create_spark_session(app_name: str = "BDMSparkApp") -> SparkSession:
+    """Creates and returns a Spark session configured for Iceberg."""
+    spark = SparkSession.builder.appName(app_name) \
+        .config("spark.sql.catalog.iceberg.warehouse", "s3a://trusted-zone/iceberg_catalog/") \
+        .getOrCreate()
+    logger.info(f"Spark session '{app_name}' created with Iceberg support.")
+    return spark

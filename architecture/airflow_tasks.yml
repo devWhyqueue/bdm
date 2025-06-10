@@ -35,3 +35,12 @@ services:
       dockerfile: bdm/processing/reddit/Dockerfile
     container_name: reddit_data_processor
     command: [ "--help" ]
+
+  finnhub_data_processor:
+    container_name: finnhub_data_processor
+    build:
+      context: ..
+      dockerfile: bdm/processing/finnhub/Dockerfile
+    image: finnhub-data-processor
+    depends_on:
+      - minio

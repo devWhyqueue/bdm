@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+from time import sleep
 from typing import List, Dict, Any
 
 import click
@@ -84,7 +85,7 @@ def create_metadata(category: str, news_items: List[Dict[str, Any]]) -> Dict[str
     }
 
 
-def save_to_storage(news_items: List[Dict[str, Any]], bucket: str, category: str, prefix: str) -> None:
+def save_to_storage(news_items: List[Dict[str, Any]], bucket: str, category: str, prefix: str) -> str:
     """Save scraped news to MinIO S3 storage."""
     try:
         s3_client = get_minio_client()
@@ -101,6 +102,7 @@ def save_to_storage(news_items: List[Dict[str, Any]], bucket: str, category: str
         )
 
         logger.info("Successfully saved data to %s/%s", bucket, filename)
+        return filename
 
     except Exception as e:
         logger.error("Error saving to storage: %s", str(e))
@@ -119,6 +121,7 @@ def save_to_storage(news_items: List[Dict[str, Any]], bucket: str, category: str
               help='Prefix for S3 object keys')
 def main(category: str, min_id: int, bucket: str, prefix: str) -> None:
     """Fetch crypto news from Finnhub and save to MinIO/S3."""
+    output_filename = None
     try:
         logger.info("Starting Finnhub %s news scraper", category)
 
@@ -126,8 +129,11 @@ def main(category: str, min_id: int, bucket: str, prefix: str) -> None:
         news_items = fetch_crypto_news(api_key, category, min_id)
         processed_news = process_news_data(news_items)
 
-        save_to_storage(processed_news, bucket, category, prefix)
+        output_filename = save_to_storage(processed_news, bucket, category, prefix)
         logger.info("Finnhub news scraper completed successfully")
+        if output_filename:
+            sleep(3)
+            print(output_filename)
 
     except Exception as e:
         logger.error("Script failed: %s", str(e))
