@@ -46,7 +46,7 @@ def _transform_file(spark: SparkSession, path: str) -> Tuple[Optional[DataFrame]
     # Unpersist the cached DataFrame once we're done with it.
     cleaned.unpersist()
 
-    return final, n_exp if final else (None, 0)
+    return (final, n_exp) if final else (None, 0)
 
 
 def _write_file(df: DataFrame, path: str, table: str) -> Tuple[bool, int, datetime]:
