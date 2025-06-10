@@ -14,6 +14,7 @@ Big data project for the BDM course at UPC.
 │   ├── processing/     # Trusted zone
 │       ├── iceberg/    # Creation of Iceberg tables
 │       ├── reddit/     # Reddit processing containers
+│       ├── finnhub/    # Finnhub processing containers
 │       ├── streaming/  # Streaming processing containers
 ├── docker-compose.yml  # Main Docker Compose file
 |── .env                # Environment variables for the project

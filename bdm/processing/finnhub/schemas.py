@@ -38,9 +38,9 @@ FINNHUB_FILE_SCHEMA = {
 
 # PySpark Schema for the 'finnhub_articles' Iceberg table
 FINNHUB_ARTICLE_SPARK_SCHEMA = StructType([
-    StructField("article_id", LongType(), nullable=False), # Mapped from id
+    StructField("id", LongType(), nullable=False),  # Mapped from id
     StructField("category", StringType(), nullable=False),
-    StructField("datetime_utc", TimestampType(), nullable=False), # Converted from datetime
+    StructField("published_at_utc", TimestampType(), nullable=False),  # Converted from datetime
     StructField("headline", StringType(), nullable=False),
     StructField("source", StringType(), nullable=False),
     StructField("summary", StringType(), nullable=True),
@@ -76,9 +76,9 @@ SPARK_RAW_FINNHUB_FILE_SCHEMA = StructType([
 
 # Schema for the cleaned article before checksum calculation
 CLEANED_ARTICLE_STRUCT_SCHEMA = StructType([
-    StructField("article_id", LongType(), True),
+    StructField("id", LongType(), True),
     StructField("category", StringType(), True),
-    StructField("datetime_utc", TimestampType(), True), # Cleaned data has it as Timestamp
+    StructField("published_at_utc", TimestampType(), True),  # Cleaned data has it as Timestamp
     StructField("headline", StringType(), True),
     StructField("source", StringType(), True),
     StructField("summary", StringType(), True),

@@ -6,7 +6,6 @@ from airflow.models.param import Param
 from airflow.providers.docker.operators.docker import DockerOperator
 
 DEFAULT_DOCKER_IMAGE_NAME = "finnhub-data-processor:latest"
-SPARK_APP_PYTHON_FILE = "/opt/bitnami/spark/work/bdm/processing/finnhub/process_finnhub_data.py"
 
 env_vars = {
     'MINIO_ENDPOINT': '{{ conn.s3.extra_dejson.host }}',
@@ -58,13 +57,12 @@ def finnhub_processing_dag():
 
     task_doc_md = f"""
     #### Run Spark Finnhub Processor Task
-    Executes the `{SPARK_APP_PYTHON_FILE}` Spark application.
+    Executes the Spark application.
     - **Docker Image**: `{{ params.docker_image }}`
     - **Input Path**: `{input_file_path}` (Dynamically set from trigger)
     """
 
     command = [
-        SPARK_APP_PYTHON_FILE,
         "--input-path", input_file_path
     ]
 

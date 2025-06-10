@@ -118,6 +118,11 @@ services:
       file: ./architecture/airflow_tasks.yml
       service: reddit_data_processor
 
+  finnhub_data_processor:
+    extends:
+      file: ./architecture/airflow_tasks.yml
+      service: finnhub_data_processor
+
   # ----------------------------------------------------------------------
   # Kafka services
   # ----------------------------------------------------------------------

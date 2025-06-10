@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+from time import sleep
 from typing import List, Dict, Any
 
 import click
@@ -131,6 +132,7 @@ def main(category: str, min_id: int, bucket: str, prefix: str) -> None:
         output_filename = save_to_storage(processed_news, bucket, category, prefix)
         logger.info("Finnhub news scraper completed successfully")
         if output_filename:
+            sleep(3)
             print(output_filename)
 
     except Exception as e:

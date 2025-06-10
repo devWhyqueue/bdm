@@ -36,7 +36,7 @@ services:
     container_name: reddit_data_processor
     command: [ "--help" ]
 
-  finnhub-data-processor:
+  finnhub_data_processor:
     container_name: finnhub_data_processor
     build:
       context: ..

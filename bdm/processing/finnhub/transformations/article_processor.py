@@ -23,7 +23,8 @@ def is_valid_uri(url: Optional[str]) -> bool:
         return False
     try:
         result = urlparse(url)
-        return bool(result.scheme and result.netloc)
+        valid_schemes = ['http', 'https']
+        return bool(result.scheme in valid_schemes and result.netloc)
     except (ValueError, AttributeError):
         return False
 
@@ -80,7 +81,7 @@ def _validate_article_headline(raw_headline: Any) -> Optional[str]:
     """Validates the article headline."""
     # Ensure clean_string and logger are in scope
     headline = clean_string(raw_headline)
-    if not headline or len(headline) < 5:
+    if not headline or len(headline) < 10:
         logger.warning(f"Invalid or missing headline: '{headline}'. Dropping record.")
         return None
     return headline
@@ -135,15 +136,6 @@ def validate_and_clean_article(
 
     Each validation step, if failed, results in the article being dropped (returns None).
     Optional fields are cleaned and set appropriately.
-
-    Args:
-        raw_article: The raw article data, expected to be a dictionary.
-        metadata_category: The expected category string for validation.
-        scraped_at_dt: The datetime object representing when the article was scraped.
-
-    Returns:
-        A dictionary with cleaned and validated article data, or None if any
-        critical validation fails. Field names are mapped to the desired schema.
     """
     # Assumes Dict, Any, Optional from typing & datetime, timedelta, timezone from datetime are imported.
     # Assumes logger, clean_string, is_valid_uri, KNOWN_SOURCES_WHITELIST are available in scope.
@@ -151,7 +143,7 @@ def validate_and_clean_article(
 
     article_id = _validate_article_id(raw_article.get("id"))
     if article_id is None: return None
-    cleaned_article["article_id"] = article_id
+    cleaned_article["id"] = article_id
 
     category = _validate_article_category(raw_article.get("category"), metadata_category)
     if category is None: return None
@@ -159,7 +151,7 @@ def validate_and_clean_article(
 
     article_dt = _validate_and_convert_article_datetime(raw_article.get("datetime"), scraped_at_dt)
     if article_dt is None: return None
-    cleaned_article["datetime_utc"] = article_dt
+    cleaned_article["published_at_utc"] = article_dt
 
     headline = _validate_article_headline(raw_article.get("headline"))
     if headline is None: return None
@@ -185,16 +177,16 @@ def deduplicate_articles(articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]
 
     articles_by_id = {}
     for article in articles:
-        article_id = article.get("article_id")  # Using the cleaned field name
+        article_id = article.get("id")  # Using the cleaned field name
         if article_id is None:  # Should not happen if validation passed
             continue
 
         # datetime_utc is already a datetime object here
-        current_article_dt = article.get("datetime_utc")
+        current_article_dt = article.get("published_at_utc")
 
         if article_id not in articles_by_id or (
-                current_article_dt and articles_by_id[article_id].get("datetime_utc") and current_article_dt >
-                articles_by_id[article_id]["datetime_utc"]):
+                current_article_dt and articles_by_id[article_id].get("published_at_utc") and current_article_dt >
+                articles_by_id[article_id]["published_at_utc"]):
             articles_by_id[article_id] = article
 
     return list(articles_by_id.values())

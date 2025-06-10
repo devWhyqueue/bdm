@@ -1,13 +1,14 @@
 import unittest
 from datetime import datetime, timezone, timedelta
 
-from bdm.processing.finnhub.article_processor import (
+from bdm.processing.finnhub.transformations.article_processor import (
     validate_and_clean_article,
     deduplicate_articles,
     KNOWN_SOURCES_WHITELIST,
     is_valid_uri,
     clean_string
 )
+
 
 # Helper to create a base valid raw article
 def create_base_raw_article(override: dict = None) -> dict:
@@ -21,7 +22,8 @@ def create_base_raw_article(override: dict = None) -> dict:
         "url": "https://example.com/valid_article",
         "image": "https://example.com/valid_image.png"
     }
-    if KNOWN_SOURCES_WHITELIST and "Test Source" not in KNOWN_SOURCES_WHITELIST: # Add if not present for testing
+    # Ensure Test Source is in whitelist for tests
+    if "Test Source" not in KNOWN_SOURCES_WHITELIST:
         KNOWN_SOURCES_WHITELIST.append("Test Source")
 
     if override:
@@ -176,9 +178,6 @@ class TestArticleProcessor(unittest.TestCase):
             {"article_id": 2, "headline": "Article 2"},
         ]
         # The behavior might be to keep the one with datetime_utc if present, or the last one encountered.
-        # Current implementation: if current_article_dt is None, it won't be > existing.
-        # If existing has no date, and current has a date, it will be chosen.
-        # If both have no date, the first one encountered for that ID is kept.
         deduplicated = deduplicate_articles(articles)
         self.assertEqual(len(deduplicated), 2)
         article1 = next(a for a in deduplicated if a["article_id"] == 1)

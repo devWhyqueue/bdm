@@ -25,7 +25,7 @@ env_vars = {
 
 
 @dag(
-    dag_id='finnhub_crypto_news_scraper',
+    dag_id='finnhub_news_ingestion',
     default_args=default_args,
     description='Scrape crypto news from Finnhub API and trigger processing DAG',
     schedule_interval='*/10 * * * *',
