@@ -15,7 +15,8 @@ Big data project for the BDM course at UPC.
 │       ├── iceberg/    # Creation of Iceberg tables
 │       ├── reddit/     # Reddit processing containers
 │       ├── finnhub/    # Finnhub processing containers
-│       ├── streaming/  # Streaming processing containers
+│   ├── analytics/      # Analytics zone
+│       ├── finazon/    # Finazon analytics container
 ├── docker-compose.yml  # Main Docker Compose file
 |── .env                # Environment variables for the project
 ├── pyproject.toml      # Dependencies for local development
