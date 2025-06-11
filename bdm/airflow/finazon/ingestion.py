@@ -28,7 +28,7 @@ def finazon_asset_ticks():
         client = hook.get_conn()
 
         containers = client.containers(all=True)
-        container = next((c for c in containers if 'finazon_stream' in c['Image']), None)
+        container = next((c for c in containers if 'finazon_stream_ingestion' in c['Image']), None)
         container_status = container['State']
 
         if container_status != 'running':

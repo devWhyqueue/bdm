@@ -15,8 +15,8 @@ check_jobmanager() {
 }
 
 submit_flink_job() {
-  echo "Submitting Bitcoin Aggregator job to Flink..."
-  if flink run -m jobmanager:8081 -d /opt/flink/usrlib/bitcoin-aggregator.jar; then
+  echo "Submitting Finazon Stream Pipeline Processor job to Flink..."
+  if flink run -m jobmanager:8081 -d /opt/flink/usrlib/finazon-stream-pipeline-processor.jar; then
     echo "Job submitted successfully."
   else
     echo "Failed to submit job to Flink."

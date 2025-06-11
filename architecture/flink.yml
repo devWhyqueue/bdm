@@ -5,6 +5,7 @@ services:
     ports:
       - "8081:8081"
     command: jobmanager
+    entrypoint: ["/bin/sh", "-c", "chmod -R 777 /opt/flink/web-upload && exec /docker-entrypoint.sh jobmanager"]
     environment:
       - |
         FLINK_PROPERTIES=
@@ -46,21 +47,3 @@ services:
     volumes:
       - flink-checkpoints:/opt/flink/checkpoints
       - flink-usrlib:/opt/flink/usrlib
-
-  bitcoin-aggregator:
-    build:
-      context: ../bdm/processing/streaming/bitcoin_aggregator
-      dockerfile: Dockerfile
-    container_name: bitcoin-aggregator
-    environment:
-      - KAFKA_ENDPOINT=kafka:9092
-      - KAFKA_TOPIC=btc_usdt
-      - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET=landing-zone
-    depends_on:
-      - jobmanager
-      - taskmanager
-      - kafka
-      - minio

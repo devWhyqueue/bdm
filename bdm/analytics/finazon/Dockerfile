@@ -17,7 +17,7 @@ RUN mvn clean package -DskipTests
 FROM apache/flink:1.19
 
 # Copy the JAR file from the builder stage
-COPY --from=builder /app/target/bitcoin-aggregator-*.jar /opt/flink/usrlib/bitcoin-aggregator.jar
+COPY --from=builder /app/target/finazon-stream-pipeline-processor-*.jar /opt/flink/usrlib/finazon-stream-pipeline-processor.jar
 
 # Copy the job submission script
 COPY submit-job.sh /opt/flink/bin/

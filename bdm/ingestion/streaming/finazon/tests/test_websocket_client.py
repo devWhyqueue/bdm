@@ -20,16 +20,27 @@ class TestFinazonMarketDataProducer:
         """Create a producer instance for testing."""
         return FinazonMarketDataProducer(
             price_ticks_topic="test_price_ticks",
-            stream_topic="test_stream",
+            stream_topic="test_volume_stream",
             ticker_symbols=["AAPL", "MSFT"],
             data_source="us_stocks_essential"
         )
+
+    @pytest.fixture
+    def transformed_market_data(self, sample_market_data):
+        """Provides a sample of transformed market data."""
+        producer = FinazonMarketDataProducer(
+            price_ticks_topic="",
+            stream_topic="",
+            ticker_symbols=[],
+            data_source="us_stocks_essential"
+        )
+        return producer._transform_market_data(sample_market_data)
 
     @staticmethod
     def test_init(producer, mock_kafka_producer):
         """Test initialization of the producer."""
         assert producer.price_ticks_topic == "test_price_ticks"
-        assert producer.stream_topic == "test_stream"
+        assert producer.stream_topic == "test_volume_stream"
         assert producer.ticker_symbols == ["AAPL", "MSFT"]
         assert producer.data_source == "us_stocks_essential"
         assert producer.kafka_producer is mock_kafka_producer
@@ -40,72 +51,78 @@ class TestFinazonMarketDataProducer:
         assert FinazonMarketDataProducer._validate_market_data(sample_market_data) is True
 
     @staticmethod
-    def test_validate_market_data_invalid(producer):
+    def test_validate_market_data_invalid(producer, sample_market_data):
         """Test validation with invalid market data."""
-        # Missing required fields
-        invalid_data = {"d": "us_stocks_essential", "p": "finazon"}
-        assert FinazonMarketDataProducer._validate_market_data(invalid_data) is False
+        assert FinazonMarketDataProducer._validate_market_data({}) is False
 
-        # Missing one required field
-        partial_data = {
-            "d": "us_stocks_essential",
-            "p": "finazon",
-            "ch": "bars",
-            "s": "AAPL",
-            "t": 1699540020,
-            "o": 220.06,
-            "h": 220.13,
-            # Missing 'l' field
-            "c": 219.96,
-            "v": 4572
-        }
-        assert FinazonMarketDataProducer._validate_market_data(partial_data) is False
+        required_fields = ['o', 'c', 'h', 'l', 'v', 't', 's']
+        for field in required_fields:
+            invalid_data = sample_market_data.copy()
+            del invalid_data[field]
+            assert FinazonMarketDataProducer._validate_market_data(invalid_data) is False
+
+    @staticmethod
+    def test_transform_market_data(producer, sample_market_data, transformed_market_data):
+        """Test the transformation of raw market data."""
+        result = producer._transform_market_data(sample_market_data)
+        assert result == transformed_market_data
 
     @pytest.mark.asyncio
-    async def test_send_interpolated_price_ticks(self, producer, sample_market_data, mock_sleep):
+    async def test_send_interpolated_price_ticks(self, producer, transformed_market_data, mock_sleep):
         """Test interpolated price ticks sending."""
-        # Call the method
-        await producer._send_interpolated_price_ticks(sample_market_data)
+        await producer._send_interpolated_price_ticks(transformed_market_data)
 
-        # Assert the data was sent to Kafka 90 times
         assert producer.kafka_producer.send.call_count == 90
 
-        # Check the first interpolated message
         first_call_args = producer.kafka_producer.send.call_args_list[0][0]
         first_message = json.loads(first_call_args[1].decode())
 
-        # Topic should be correct
         assert first_call_args[0] == "test_price_ticks"
+        assert first_message["symbol"] == transformed_market_data["symbol"]
+        assert first_message["timestamp"] == transformed_market_data["timestamp"]
+        assert abs(first_message["price"] - transformed_market_data["open_price"]) < 0.01
 
-        # Message should contain expected data
-        assert first_message["symbol"] == "AAPL"
-        assert first_message["timestamp"] == 1699540020
-        assert abs(first_message["price"] - 220.06) < 0.01
-
-        # Check last message to ensure interpolation reached close price
         last_call_args = producer.kafka_producer.send.call_args_list[89][0]
         last_message = json.loads(last_call_args[1].decode())
+        assert abs(last_message["price"] - transformed_market_data["close_price"]) < 0.01
 
-        # Last price should be close to close price
-        assert abs(last_message["price"] - 219.96) < 0.01
-
-        # Sleep should have been called 90 times to control the rate
         assert mock_sleep.call_count == 90
 
     @pytest.mark.asyncio
-    async def test_handle_websocket_connection(self, producer, mock_websocket_connect, sample_market_data):
-        """Test handling WebSocket connection and reddit messages."""
-        _, mock_websocket = mock_websocket_connect
+    async def test_process_single_message_valid(self, producer, sample_market_data, transformed_market_data):
+        """Test processing a single valid WebSocket message."""
+        with mock.patch.object(producer, '_send_interpolated_price_ticks') as mock_send_interpolated:
+            await producer._process_single_message(json.dumps(sample_market_data))
 
-        # Configure the mock to provide a message then raise an exception to exit the loop
+            producer.kafka_producer.send.assert_called_once()
+            call_args = producer.kafka_producer.send.call_args[0]
+            assert call_args[0] == "test_volume_stream"
+            sent_data = json.loads(call_args[1].decode())
+            assert sent_data == transformed_market_data
+
+            mock_send_interpolated.assert_called_once_with(transformed_market_data)
+
+    @pytest.mark.asyncio
+    async def test_process_single_message_invalid(self, producer):
+        """Test processing a single invalid WebSocket message."""
+        invalid_data = {"d": "us_stocks_essential"}
+        with mock.patch.object(producer, '_send_interpolated_price_ticks') as mock_send_interpolated, \
+                mock.patch('logging.warning') as mock_logging:
+            await producer._process_single_message(json.dumps(invalid_data))
+
+            producer.kafka_producer.send.assert_not_called()
+            mock_send_interpolated.assert_not_called()
+            mock_logging.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_handle_websocket_connection(self, producer, mock_websocket_connect, sample_market_data):
+        """Test handling WebSocket connection and processing messages."""
+        _, mock_websocket = mock_websocket_connect
         mock_websocket.__aiter__.return_value = [json.dumps(sample_market_data)]
 
-        # Mock the validation and reddit methods
-        with mock.patch.object(FinazonMarketDataProducer, '_validate_market_data', return_value=True) as mock_validate, \
-                mock.patch.object(producer, '_send_interpolated_price_ticks') as mock_process:
+        with mock.patch.object(producer, '_process_single_message') as mock_process:
             await producer._handle_websocket_connection()
 
-            # Assert the subscription was sent
             subscription_message = json.dumps({
                 "event": "subscribe",
                 "dataset": "us_stocks_essential",
@@ -116,57 +133,25 @@ class TestFinazonMarketDataProducer:
             })
             mock_websocket.send.assert_called_once_with(subscription_message)
 
-            # Assert the market data was validated
-            mock_validate.assert_called_once_with(sample_market_data)
-
-            # Assert the market data was processed
-            mock_process.assert_called_once_with(sample_market_data)
-
-    @pytest.mark.asyncio
-    async def test_handle_websocket_invalid_data(self, producer, mock_websocket_connect):
-        """Test handling invalid WebSocket data."""
-        _, mock_websocket = mock_websocket_connect
-
-        # Configure the mock to provide an invalid message
-        invalid_data = {"d": "us_stocks_essential"}
-        mock_websocket.__aiter__.return_value = [json.dumps(invalid_data)]
-
-        # Mock the validation method to return False and the reddit method
-        with mock.patch.object(FinazonMarketDataProducer, '_validate_market_data', return_value=False) as mock_validate, \
-                mock.patch.object(producer, '_send_interpolated_price_ticks') as mock_process, \
-                mock.patch('logging.warning') as mock_logging:
-            await producer._handle_websocket_connection()
-
-            # Assert the validation was called but reddit was not
-            mock_validate.assert_called_once_with(invalid_data)
-            mock_process.assert_not_called()
-
-            # Assert a warning was logged
-            mock_logging.assert_called_once()
+            mock_process.assert_called_once_with(json.dumps(sample_market_data))
 
     @staticmethod
     def test_run(producer):
         """Test the run method."""
-        # Create a regular Mock (not AsyncMock) to avoid coroutine warnings
         mock_process = mock.Mock()
 
-        # Mock asyncio.run and the close method
         with mock.patch.object(producer, '_process_market_data', mock_process), \
                 mock.patch('asyncio.run') as mock_run, \
                 mock.patch.object(producer.kafka_producer, 'close') as mock_close:
             producer.run()
 
-            # Assert asyncio.run was called once (don't check the exact argument)
             assert mock_run.call_count == 1
 
-            # Assert kafka producer was closed
             mock_close.assert_called_once()
 
     @staticmethod
     def test_run_with_keyboard_interrupt(producer):
         """Test the run method with keyboard interrupt."""
-        # We'll patch asyncio.run but test the real run method with a mock for _process_market_data
-        # Create a mock for _process_market_data that's not a coroutine
         mock_process = mock.Mock()
 
         def side_effect(*args, **kwargs):
@@ -178,11 +163,8 @@ class TestFinazonMarketDataProducer:
                 mock.patch('logging.info') as mock_logging:
             producer.run()
 
-            # Assert that asyncio.run was attempted to be called with our mocked method
-            # Assert shutdown message was logged
             mock_logging.assert_called_once_with("Application shutdown requested")
 
-            # Assert kafka producer was closed
             mock_close.assert_called_once()
 
 
@@ -202,7 +184,7 @@ class TestCommandLineInterface:
                 main,
                 [
                     '--price-ticks-topic', 'test_price_ticks',
-                    '--stream-topic', 'test_stream',
+                    '--stream-topic', 'test_volume_stream',
                     '--tickers', 'AAPL,MSFT',
                     '--dataset', 'us_stocks_essential'
                 ]
@@ -210,7 +192,7 @@ class TestCommandLineInterface:
             assert result.exit_code == 0
             mock_producer_class.assert_called_once_with(
                 'test_price_ticks',
-                'test_stream',
+                'test_volume_stream',
                 ['AAPL', 'MSFT'],
                 'us_stocks_essential'
             )

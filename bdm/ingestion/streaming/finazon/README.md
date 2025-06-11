@@ -43,7 +43,7 @@ The following environment variables need to be set:
 ```bash
 python -m bdm.ingestion.streaming.finazon.websocket_client \
   --price-ticks-topic price_ticks \
-  --stream-topic stream \
+  --volume-stream-topic volume_stream \
   --tickers AAPL,MSFT,GOOGL \
   --dataset us_stocks_essential
 ```
@@ -56,7 +56,7 @@ from bdm.ingestion.streaming.finazon.websocket_client import FinazonMarketDataPr
 # Initialize the producer
 producer = FinazonMarketDataProducer(
     price_ticks_topic="price_ticks",
-    stream_topic="stream",
+    volume_stream_topic="volume_stream",
     ticker_symbols=["AAPL", "MSFT", "GOOGL"],
     data_source="us_stocks_essential"
 )
@@ -70,7 +70,7 @@ producer.run()
 The module processes Finazon WebSocket data and outputs two Kafka streams:
 
 - **price_ticks_topic**: High-frequency price ticks (symbol, timestamp, price) interpolated every few ms using the event's timestamp for event time processing.
-- **stream_topic**: Full market data event (all Finazon fields) every second.
+- **volume_stream_topic**: Full market data event (all Finazon fields) every second.
 
 Each price tick message example:
 
@@ -82,22 +82,22 @@ Each price tick message example:
 }
 ```
 
-Each stream message example:
+Each volume stream message example:
 
 ```json
 {
-  "data_source": "us_stocks_essential",
-  "provider": "finazon",
-  "channel": "bars",
-  "frequency": "1s",
-  "aggregation": "1m",
-  "symbol": "AAPL",
-  "timestamp": 1699540020,
-  "open_price": 220.06,
-  "close_price": 219.96,
-  "high_price": 220.13,
-  "low_price": 219.92,
-  "volume": 4572
+  "d": "us_stocks_essential",
+  "p": "finazon",
+  "ch": "bars",
+  "f": "1s",
+  "aggr": "1m",
+  "s": "AAPL",
+  "t": 1699540020,
+  "o": 220.06,
+  "h": 220.13,
+  "l": 219.92,
+  "c": 219.96,
+  "v": 4572
 }
 ```
 
@@ -106,7 +106,7 @@ Each stream message example:
 Run the tests with:
 
 ```bash
-pytest bdm/finnhub/streaming/finazon/tests/
+pytest bdm/ingestion/streaming/finazon/tests/
 ```
 
 ## License
