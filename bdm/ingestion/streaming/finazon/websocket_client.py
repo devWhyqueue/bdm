@@ -65,8 +65,8 @@ class FinazonMarketDataProducer:
         }
         await websocket.send(json.dumps(subscription_payload))
 
-    def _transform_market_data(self, market_data: dict) -> dict:
-        """Transforms raw market data to the schema for the stream."""
+    def _transform_market_data(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Transforms raw market data to the desired output format."""
         return {
             "data_source": market_data.get('d', self.data_source),
             "provider": market_data.get('p', 'Finazon'),
@@ -82,69 +82,35 @@ class FinazonMarketDataProducer:
             "volume": market_data.get('v', 0)
         }
 
-    def _send_to_stream(self, transformed_market_data: dict) -> None:
-        """Sends transformed market data to the Kafka stream topic."""
-        self.kafka_producer.send(
-            self.stream_topic,
-            json.dumps(transformed_market_data).encode()
-        )
-
-    async def _process_message(self, message_str: str) -> None:
+    async def _process_single_message(self, websocket_message: str) -> None:
         """Processes a single incoming WebSocket message."""
-        market_data = json.loads(message_str)
+        market_data = json.loads(websocket_message)
         if not self._validate_market_data(market_data):
             logging.warning("Received incomplete market data: %s", market_data)
             return
 
         transformed_data = self._transform_market_data(market_data)
-        self._send_to_stream(transformed_data)
-        await self._send_interpolated_price_ticks(market_data)
+        self.kafka_producer.send(
+            self.stream_topic,
+            json.dumps(transformed_data).encode()
+        )
+        await self._send_interpolated_price_ticks(transformed_data)
 
     async def _handle_websocket_connection(self) -> None:
         """Establish WebSocket connection and process incoming market data messages."""
         logging.info("Establishing WebSocket connection to Finazon API")
+        subscription_payload = {
+            "event": "subscribe",
+            "dataset": self.data_source,
+            "tickers": self.ticker_symbols,
+            "channel": "bars",
+            "frequency": "1s",
+            "aggregation": "1m"
+        }
         async with websockets.connect(FINAZON_API_URL, ping_interval=30, ping_timeout=60) as websocket:
-            await websocket.send(json.dumps({
-                "event": "subscribe",
-                "dataset": self.data_source,
-                "tickers": self.ticker_symbols,
-                "channel": "bars",
-                "frequency": "1s",
-                "aggregation": "1m"
-            }))
-
-            # Process incoming messages
+            await websocket.send(json.dumps(subscription_payload))
             async for message in websocket:
-                market_data = json.loads(message)
-                if not self._validate_market_data(market_data):
-                    logging.warning("Received incomplete market data: %s", market_data)
-                    continue
-
-                # Overwrite all timestamps in market_data with current UTC time (milliseconds)
-                import time
-                utc_now_ms = time.time_ns() // 1_000_000
-                # Use long-form keys for all attributes
-                transformed_market_data = {
-                    "data_source": market_data.get('d', self.data_source),
-                    "provider": market_data.get('p', 'Finazon'),
-                    "channel": market_data.get('ch', 'bars'),
-                    "frequency": market_data.get('f', '1s'),
-                    "aggregation": market_data.get('aggr', '1m'),
-                    "symbol": market_data.get('s', ''),
-                    "timestamp": utc_now_ms,
-                    "open_price": market_data.get('o', 0.0),
-                    "close_price": market_data.get('c', 0.0),
-                    "high_price": market_data.get('h', 0.0),
-                    "low_price": market_data.get('l', 0.0),
-                    "volume": market_data.get('v', 0)
-                }
-                # Send full event to volume stream (every second)
-                self.kafka_producer.send(
-                    self.stream_topic,
-                    json.dumps(transformed_market_data).encode()
-                )
-                # Send interpolated price ticks to price ticks topic
-                await self._send_interpolated_price_ticks(transformed_market_data)
+                await self._process_single_message(message)
 
     @staticmethod
     def _validate_market_data(market_data: Dict[str, Any]) -> bool:

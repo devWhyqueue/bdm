@@ -45,6 +45,15 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  influxdb:
+    extends:
+      file: ./architecture/database.yml
+      service: influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+
   # ----------------------------------------------------------------------
   # Airflow services
   # ----------------------------------------------------------------------
@@ -98,10 +107,15 @@ services:
   # ----------------------------------------------------------------------
   # Airflow task build services
   # ----------------------------------------------------------------------
-  finazon_stream_btc_usdt:
+  finazon_stream_ingestion:
     extends:
       file: ./architecture/airflow_tasks.yml
-      service: finazon_stream_btc_usdt
+      service: finazon_stream_ingestion
+
+  finazon-stream-processor:
+    extends:
+      file: ./architecture/airflow_tasks.yml
+      service: finazon-stream-processor
 
   reddit_bitcoin_ingestion:
     extends:
@@ -175,11 +189,6 @@ services:
       - kafka
       - minio
 
-  bitcoin-aggregator:
-    extends:
-      file: ./architecture/flink.yml
-      service: bitcoin-aggregator
-
   iceberg-init-runner:
     extends:
       file: ./architecture/iceberg.yml
@@ -196,23 +205,6 @@ services:
       - airflow-webserver
       - kafka-ui
       - jobmanager
-
-  influxdb:
-    extends:
-      file: ./architecture/influxdb.yml
-      service: influxdb
-    ports:
-      - "8086:8086"
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
-      - DOCKER_INFLUXDB_INIT_ORG=bdm
-      - DOCKER_INFLUXDB_INIT_BUCKET=exploitation_zone_streaming_data
-      - DOCKER_INFLUXDB_INIT_RETENTION=1h
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=admintoken
-    volumes:
-      - influxdb-data:/var/lib/influxdb2
 
 volumes:
   postgres-db-volume:

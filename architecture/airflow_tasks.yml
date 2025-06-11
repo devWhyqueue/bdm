@@ -1,16 +1,43 @@
 services:
-  finazon_stream_btc_usdt:
-    image: finazon_stream
+  finazon_stream_ingestion:
+    image: finazon_stream_ingestion
     build:
       context: ../bdm/ingestion/streaming/finazon
       dockerfile: Dockerfile
-    container_name: finazon_stream_btc_usdt
-    command: [ "python", "websocket_client.py", "--price-ticks-topic", "btc_usdt_price_ticks", "--stream-topic", "btc_usdt_stream", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
+    container_name: finazon_stream_ingestion
+    command: [ "python", "websocket_client.py", "--price-ticks-topic", "btc_usdt_price_ticks", "--stream-topic", "btc_usdt_volume_stream", "--tickers", "BTC/USDT", "--dataset", "crypto" ]
     environment:
       - KAFKA_ENDPOINT=kafka:9092
       - FINAZON_API_KEY=${FINAZON_API_KEY}
     depends_on:
       - kafka
+      - kafka-ui
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+  finazon-stream-processor:
+    build:
+      context: ../bdm/analytics/finazon
+      dockerfile: Dockerfile
+    container_name: finazon-stream-processor
+    environment:
+      - PRICE_TICKS_TOPIC=btc_usdt_price_ticks
+      - STREAM_TOPIC=btc_usdt_volume_stream
+      - KAFKA_ENDPOINT=kafka:9092
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      - INFLUXDB_BUCKET=exploitation_zone_streaming_data
+      - INFLUXDB_ORG=bdm
+      - INFLUXDB_TOKEN=admintoken
+    depends_on:
+      - jobmanager
+      - taskmanager
+      - kafka
+      - kafka-ui
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
   reddit_bitcoin_ingestion:
     image: subreddit-scraper
