@@ -13,8 +13,3 @@ services:
       - ../bdm/processing/iceberg:/opt/bitnami/spark/work/iceberg_scripts # Mount scripts
       - ./spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf # Mount custom Spark defaults
     command: [ "bash", "/opt/bitnami/spark/work/iceberg_scripts/run_iceberg_init.sh" ]
-    depends_on:
-      minio:
-        condition: service_healthy
-      createbuckets:
-        condition: service_completed_successfully

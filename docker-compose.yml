@@ -30,6 +30,7 @@ services:
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
       - ./architecture/init-analytics-db.sh:/docker-entrypoint-initdb.d/init-analytics-db.sh
+      - ./bdm/analytics/postgres/initdb.d/:/docker-entrypoint-initdb.d/
 
   redis:
     extends:
@@ -137,6 +138,43 @@ services:
       file: ./architecture/airflow_tasks.yml
       service: finnhub_data_processor
 
+  # ──────────────────────────────────────────────────────────────────────
+  # Analytics Pipelines
+  # ──────────────────────────────────────────────────────────────────────
+  finnhub-analytics-pipeline:
+    build:
+      context: ./bdm/analytics/finnhub
+      dockerfile: Dockerfile
+    container_name: finnhub-analytics-pipeline
+    environment:
+      # Spark Master (optional, defaults to local[*] in start-spark-job.sh)
+      # SPARK_MASTER_URL: spark://spark-master:7077
+
+      # PostgreSQL Connection Details for the Spark Application
+      POSTGRES_HOST: postgres # Service name of the postgres container in this docker-compose
+      POSTGRES_PORT: "5432" # Ensure it's a string if any component is sensitive
+      POSTGRES_ANALYTICS_DB: ${POSTGRES_ANALYTICS_DB:-analytics_db}
+      POSTGRES_ANALYTICS_USER: ${POSTGRES_ANALYTICS_USER:-analytics_user}
+      POSTGRES_ANALYTICS_PASSWORD: ${POSTGRES_ANALYTICS_PASSWORD:-analytics_password}
+
+      # SPARK_HOME is usually set by the Bitnami base image.
+      # Explicitly setting it here ensures it, if needed by any custom scripts or tools.
+      SPARK_HOME: /opt/bitnami/spark
+      # HADOOP_HOME: /opt/bitnami/hadoop # Generally not needed to be set explicitly for Spark 3+ with S3
+    volumes:
+      # Mount our custom spark-defaults.conf to ensure it's used by Spark.
+      # This provides Iceberg, S3/MinIO, and PostgreSQL JDBC driver configurations.
+      - ./architecture/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio: # Assuming Iceberg data source is on MinIO
+        condition: service_healthy
+      iceberg-init-runner: # This service should create the source Iceberg tables
+        condition: service_completed_successfully
+    networks: # Ensure it's on the same network as services it communicates with (postgres, minio)
+      - default
+
   # ----------------------------------------------------------------------
   # Kafka services
   # ----------------------------------------------------------------------
@@ -193,6 +231,11 @@ services:
     extends:
       file: ./architecture/iceberg.yml
       service: iceberg-init-runner
+    depends_on:
+      minio:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
 
   nginx:
     image: nginx:latest

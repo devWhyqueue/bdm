@@ -20,8 +20,6 @@ services:
 
   createbuckets:
     image: minio/mc
-    depends_on:
-      - minio
     entrypoint: >
       /bin/sh -c "
       sleep 5;

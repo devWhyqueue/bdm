@@ -9,9 +9,6 @@ services:
     environment:
       - KAFKA_ENDPOINT=kafka:9092
       - FINAZON_API_KEY=${FINAZON_API_KEY}
-    depends_on:
-      - kafka
-      - kafka-ui
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -30,11 +27,6 @@ services:
       - INFLUXDB_BUCKET=exploitation_zone_streaming_data
       - INFLUXDB_ORG=bdm
       - INFLUXDB_TOKEN=admintoken
-    depends_on:
-      - jobmanager
-      - taskmanager
-      - kafka
-      - kafka-ui
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -69,5 +61,3 @@ services:
       context: ..
       dockerfile: bdm/processing/finnhub/Dockerfile
     image: finnhub-data-processor
-    depends_on:
-      - minio

@@ -1,0 +1,6 @@
+pyspark==3.5.6
+transformers
+torch
+vaderSentiment
+nltk
+psycopg2-binary
