@@ -32,6 +32,8 @@ services:
   taskmanager:
     image: apache/flink:1.19
     container_name: taskmanager
+    depends_on:
+      - jobmanager
     command: taskmanager
     environment:
       - |

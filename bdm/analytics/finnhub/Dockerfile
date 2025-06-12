@@ -1,31 +1,26 @@
-# Use Bitnami Spark base image as requested
-FROM bitnami/spark:3.5.6-debian-12 AS spark-base
+FROM bitnami/spark:3.5.1
 
 # Set working directory
-WORKDIR /opt/bitnami/spark/app
+WORKDIR /app
 
-# Copy application files
-COPY ./run_enrichment.py ./run_enrichment.py
-COPY ./requirements.txt ./requirements.txt
-
-# Install Python dependencies
-# Bitnami images run as non-root (user 1001).
-# Install system-wide as root, then switch back to default user.
 USER root
 
-# Install pip if not present or to ensure system pip, then install requirements and nltk data
-RUN apt-get update && apt-get install -y --no-install-recommends python3-pip && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    python3 -m nltk.downloader punkt && \
-    apt-get purge -y --auto-remove python3-pip && \
-    rm -rf /var/lib/apt/lists/*
+# Create a real spark user with UID=1001 and home directory
+RUN \
+  useradd -m -u 1001 -s /bin/bash spark && \
+  mkdir -p /tmp/.ivy2 && \
+  chown spark:spark /tmp/.ivy2
+# Switch to the newly created spark user
+USER spark
+ENV HOME=/home/spark
 
-# Switch back to the default non-root user provided by Bitnami Spark image
-USER 1001
+# Copy application files
+COPY architecture/spark-defaults.conf /opt/bitnami/spark/conf/spark-defaults.conf
+COPY ./bdm /app/bdm
+COPY ./bdm/analytics/finnhub/requirements.txt /app/requirements.txt
 
-# Copy entrypoint script (will be created in the next step)
-COPY ./start-spark-job.sh ./start-spark-job.sh
-RUN chmod +x ./start-spark-job.sh
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Set entrypoint
-ENTRYPOINT ["./start-spark-job.sh"]
+ENTRYPOINT ["spark-submit", "--conf", "spark.jars.ivy=/tmp/.ivy2", "/app/bdm/analytics/finnhub/run_enrichment.py"]

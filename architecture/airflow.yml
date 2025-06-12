@@ -76,6 +76,9 @@ services:
     <<: *airflow-common
     entrypoint: /entrypoint
     command: airflow version
+    depends_on:
+      airflow-init-db:
+        condition: service_completed_successfully
 
   # Airflow Scheduler
   airflow-scheduler:
@@ -84,12 +87,18 @@ services:
     restart: always
     healthcheck:
       <<: *airflow-scheduler-healthcheck
+    depends_on:
+      airflow-init-db:
+        condition: service_completed_successfully
 
   # Airflow Celery Worker
   airflow-worker:
     <<: *airflow-common
     command: celery worker
     restart: always
+    depends_on:
+      airflow-init-db:
+        condition: service_completed_successfully
 
   # Airflow Webserver
   airflow-webserver:
@@ -98,7 +107,12 @@ services:
     restart: always
     healthcheck:
       <<: *airflow-webserver-healthcheck
+    depends_on:
+      airflow-init-db:
+        condition: service_completed_successfully
+      airflow-scheduler:
+        condition: service_started
     environment:
       <<: *airflow-common-env
       AIRFLOW__WEBSERVER__BASE_URL: "http://localhost/airflow"
-      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'true'
+      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: True

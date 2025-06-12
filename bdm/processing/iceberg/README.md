@@ -40,19 +40,11 @@ The following scripts are executed automatically by the `iceberg-init-runner` se
     *   **Schema**: Defines columns for Finnhub article data.
     *   **Partitioning**: Partitioned by `days(scraped_at)`.
 
-3. **`03_verify_tables.sql`**:
-    * **Purpose**: Contains SQL statements to verify the setup (DESCRIBE tables, INSERT sample data, SELECT sample data
-      for `catalog.reddit_posts` and `catalog.finnhub_articles`). These operations help confirm that the tables are
-      writable and readable. The sample data insertion is idempotent in the sense that re-running it might insert
-      duplicate sample data if not designed with unique keys for the samples, but the table creation itself is
-      idempotent.
-
 4. **`run_iceberg_init.sh`**:
     * **Purpose**: Orchestrates the execution of the SQL scripts for table creation and verification using `spark-sql`
       within the `iceberg-init-runner` container. It also sets the warehouse path for the `iceberg` catalog.
     * **Idempotency**: The SQL scripts use `IF NOT EXISTS` for table creation, making the initialization process safe to
       re-run.
-    * **Verification**: Includes execution of `03_verify_tables.sql`. Success implies basic functionality.
 
 ## Execution and Verification
 

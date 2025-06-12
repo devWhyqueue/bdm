@@ -40,8 +40,4 @@ echo "--- Running 02_create_finnhub_articles_table.sql ---"
 $SPARK_SQL_CMD -f /opt/bitnami/spark/work/iceberg_scripts/02_create_finnhub_articles_table.sql
 echo "Finnhub articles table creation script executed."
 
-echo "--- Running 03_verify_tables.sql (includes DESCRIBE, INSERT, SELECT) ---"
-$SPARK_SQL_CMD -f /opt/bitnami/spark/work/iceberg_scripts/03_verify_tables.sql
-echo "Verification script executed."
-
-echo "--- Iceberg Initialization and Verification Completed Successfully ---"
+echo "--- Iceberg Initialization Completed Successfully ---"

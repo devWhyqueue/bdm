@@ -3,6 +3,7 @@ from __future__ import annotations
 import pendulum
 from airflow.decorators import dag
 from airflow.models.param import Param
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 
 DEFAULT_DOCKER_IMAGE_NAME = "finnhub-data-processor:latest"
@@ -58,7 +59,7 @@ def finnhub_processing_dag():
     task_doc_md = f"""
     #### Run Spark Finnhub Processor Task
     Executes the Spark application.
-    - **Docker Image**: `{{ params.docker_image }}`
+    - **Docker Image**: `{{{{ params.docker_image }}}}`
     - **Input Path**: `{input_file_path}` (Dynamically set from trigger)
     """
 
@@ -66,7 +67,7 @@ def finnhub_processing_dag():
         "--input-path", input_file_path
     ]
 
-    DockerOperator(
+    run_spark_processor = DockerOperator(
         task_id="run_finnhub_spark_processor",
         image="{{ params.docker_image }}",
         api_version="auto",
@@ -78,5 +79,14 @@ def finnhub_processing_dag():
         mount_tmp_dir=False,
         doc_md=task_doc_md,
     )
+
+    trigger_enrichment_dag = TriggerDagRunOperator(
+        task_id="trigger_finnhub_enrichment_dag",
+        trigger_dag_id="finnhub_enrichment_dag",
+        wait_for_completion=False,
+        deferrable=False,
+    )
+
+    run_spark_processor >> trigger_enrichment_dag
 
 finnhub_processing_dag_instance = finnhub_processing_dag()
