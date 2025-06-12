@@ -116,6 +116,13 @@ def run_job(spark: SparkSession, glob: str) -> bool:
     written, ok_info = _process_files(spark, files)
     verified = _verify(spark, ok_info)
     log.info("Batch summary — rows written: %d, verification OK: %s", written, verified)
+
+    # Extract the latest scraped_at timestamp for XCom push
+    if ok_info:
+        latest_scraped_at = max([info["scraped_at_dt"] for info in ok_info])
+        # Log in a special format for Airflow XCom to capture
+        log.info("XCOM_PUSH:{'latest_scraped_at': '%s'}", latest_scraped_at.isoformat())
+    
     return verified
 
 

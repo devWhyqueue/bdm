@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+import re
+
 import pendulum
-from airflow.decorators import dag
+from airflow.decorators import dag, task
 from airflow.models.param import Param
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 
 DEFAULT_DOCKER_IMAGE_NAME = "finnhub-data-processor:latest"
@@ -58,7 +62,7 @@ def finnhub_processing_dag():
     task_doc_md = f"""
     #### Run Spark Finnhub Processor Task
     Executes the Spark application.
-    - **Docker Image**: `{{ params.docker_image }}`
+    - **Docker Image**: `{{{{ params.docker_image }}}}`
     - **Input Path**: `{input_file_path}` (Dynamically set from trigger)
     """
 
@@ -66,7 +70,7 @@ def finnhub_processing_dag():
         "--input-path", input_file_path
     ]
 
-    DockerOperator(
+    run_spark_processor = DockerOperator(
         task_id="run_finnhub_spark_processor",
         image="{{ params.docker_image }}",
         api_version="auto",
@@ -77,6 +81,50 @@ def finnhub_processing_dag():
         environment=env_vars,
         mount_tmp_dir=False,
         doc_md=task_doc_md,
+        do_xcom_push=True,
+        xcom_all=True
     )
+
+    @task
+    def extract_scraped_at_from_logs(task_instance=None):
+        log_data = task_instance.xcom_pull(task_ids='run_finnhub_spark_processor')
+        if not isinstance(log_data, list):
+            return {}
+
+        # Pre-compile the pattern once
+        pattern = re.compile(r"XCOM_PUSH:(\{[^}]*'latest_scraped_at'[^}]*\})")
+
+        # Iterate in reverse so the first match is the latest
+        for entry in reversed(log_data):
+            if not entry:
+                continue
+            text = str(entry)
+            m = pattern.search(text)
+            if m:
+                raw = m.group(1).replace("'", '"')
+                try:
+                    payload = json.loads(raw)
+                    ts = payload.get('latest_scraped_at')
+                    if ts:
+                        return {"latest_scraped_at": ts}
+                except json.JSONDecodeError:
+                    # Could log warning here if desired
+                    break
+
+        return {}
+
+    extract_timestamp = extract_scraped_at_from_logs()
+
+    # Pass the scraped_at parameter to the enrichment DAG
+    trigger_enrichment_dag = TriggerDagRunOperator(
+        task_id="trigger_finnhub_enrichment_dag",
+        trigger_dag_id="finnhub_enrichment_dag",
+        conf={
+            "latest_scraped_at": "{{ task_instance.xcom_pull(task_ids='extract_scraped_at_from_logs')['latest_scraped_at'] }}"},
+        wait_for_completion=False,
+        deferrable=False,
+    )
+
+    run_spark_processor >> extract_timestamp >> trigger_enrichment_dag
 
 finnhub_processing_dag_instance = finnhub_processing_dag()

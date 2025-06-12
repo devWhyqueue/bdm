@@ -29,7 +29,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
-      - ./architecture/init-analytics-db.sh:/docker-entrypoint-initdb.d/init-analytics-db.sh
+      - ./bdm/analytics/postgres/initdb.d/:/docker-entrypoint-initdb.d/
 
   redis:
     extends:
@@ -137,6 +137,11 @@ services:
       file: ./architecture/airflow_tasks.yml
       service: finnhub_data_processor
 
+  finnhub-analytics-pipeline:
+    extends:
+      file: ./architecture/airflow_tasks.yml
+      service: finnhub-analytics-pipeline
+
   # ----------------------------------------------------------------------
   # Kafka services
   # ----------------------------------------------------------------------
@@ -193,6 +198,11 @@ services:
     extends:
       file: ./architecture/iceberg.yml
       service: iceberg-init-runner
+    depends_on:
+      minio:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
 
   nginx:
     image: nginx:latest
