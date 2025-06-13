@@ -24,3 +24,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Set entrypoint
 ENTRYPOINT ["spark-submit", "--conf", "spark.jars.ivy=/tmp/.ivy2", "/app/bdm/analytics/finnhub/run_enrichment.py"]
+CMD []
