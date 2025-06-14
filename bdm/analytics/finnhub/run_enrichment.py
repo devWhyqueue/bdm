@@ -1,5 +1,8 @@
+import argparse
 import logging
 import os
+from datetime import datetime
+from typing import Optional
 
 import pyspark.sql.functions as F
 from pyspark.sql import SparkSession, DataFrame
@@ -36,6 +39,18 @@ PG_PROPERTIES = {
     "password": PG_PASSWORD,
     "driver": "org.postgresql.Driver",
 }
+
+
+# ─────────────────── Command line arguments ────────────────────
+def _parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Finnhub articles enrichment")
+    parser.add_argument(
+        "--filter-scraped-at",
+        type=str,
+        help="Filter by scraped_at timestamp (ISO format)"
+    )
+    return parser.parse_args()
 
 # ─────────────────── Summarisation UDF ────────────────────
 _summariser_pipeline = None
@@ -126,7 +141,7 @@ sentiment_udf = F.udf(_analyse_sentiment, sentiment_schema)
 
 # ─────────────────── Main Transformation Logic ────────────────────
 
-def enrich_and_transform_articles(spark: SparkSession, df: DataFrame) -> DataFrame:
+def enrich_and_transform_articles(df: DataFrame) -> DataFrame:
     """Apply summarisation & sentiment analysis, prune columns, and rename fields."""
     log.info("Starting enrichment and transformation…")
 
@@ -172,13 +187,36 @@ def enrich_and_transform_articles(spark: SparkSession, df: DataFrame) -> DataFra
 
 # ─────────────────── Spark Job ────────────────────
 
-def run_spark_job(spark: SparkSession) -> None:
+def run_spark_job(spark: SparkSession, filter_scraped_at: Optional[str] = None) -> None:
+    """
+    Run the Spark job to process Finnhub articles.
+    
+    Args:
+        spark: The SparkSession
+        filter_scraped_at: Optional timestamp to filter by scraped_at
+    """
     log.info("Reading from Iceberg table: %s", ICEBERG_TABLE_NAME)
-    df_silver = spark.sql(f"SELECT * FROM {ICEBERG_TABLE_NAME}")
+
+    # Build query based on filter
+    if filter_scraped_at:
+        try:
+            # Parse the timestamp to validate format
+            datetime.fromisoformat(filter_scraped_at.replace('Z', '+00:00'))
+            log.info(f"Filtering data by scraped_at = '{filter_scraped_at}'")
+            df_silver = spark.sql(
+                f"SELECT * FROM {ICEBERG_TABLE_NAME} WHERE scraped_at = '{filter_scraped_at}'"
+            )
+        except ValueError:
+            log.warning(f"Invalid timestamp format for filter_scraped_at: {filter_scraped_at}")
+            log.info("Reading all data without filter")
+            df_silver = spark.sql(f"SELECT * FROM {ICEBERG_TABLE_NAME}")
+    else:
+        df_silver = spark.sql(f"SELECT * FROM {ICEBERG_TABLE_NAME}")
+    
     initial_count = df_silver.count()
     log.info("Initial row count from Silver: %s", initial_count)
 
-    df_gold = enrich_and_transform_articles(spark, df_silver)
+    df_gold = enrich_and_transform_articles(df_silver)
 
     final_count = df_gold.count()
     log.info("Row count for Gold (before writing): %s", final_count)
@@ -202,8 +240,9 @@ if __name__ == "__main__":
             )
             raise ImportError("Transformers library not found.")
 
+        args = _parse_args()
         spark_session = create_spark_session(app_name="FinnhubAnalyticsEnrichment")
-        run_spark_job(spark_session)
+        run_spark_job(spark_session, args.filter_scraped_at)
         log.info("Finnhub Analytics Spark Job completed successfully.")
     except Exception as e:  # noqa: BLE001
         log.fatal("Fatal error in Finnhub Analytics Spark Job: %s", e, exc_info=True)

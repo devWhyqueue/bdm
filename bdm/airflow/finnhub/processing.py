@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+import re
+
 import pendulum
-from airflow.decorators import dag
+from airflow.decorators import dag, task
 from airflow.models.param import Param
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.docker.operators.docker import DockerOperator
@@ -78,15 +81,51 @@ def finnhub_processing_dag():
         environment=env_vars,
         mount_tmp_dir=False,
         doc_md=task_doc_md,
+        do_xcom_push=True,  # Enable XCom push to capture log output
     )
 
+    @task
+    def extract_scraped_at_from_logs(task_instance=None, **kwargs):
+        """
+        Extract the latest scraped_at timestamp from the Spark processor logs.
+        
+        Args:
+            task_instance: Airflow task instance
+            
+        Returns:
+            dict: Dictionary containing the latest_scraped_at timestamp
+        """
+        logs = task_instance.xcom_pull(task_ids='run_finnhub_spark_processor')
+        scraped_at = None
+
+        if logs:
+            # Find the XCOM_PUSH log line using regex
+            xcom_pattern = r"XCOM_PUSH:(\{[^}]*\})"
+            matches = re.findall(xcom_pattern, logs)
+
+            if matches:
+                try:
+                    # Parse the JSON string from the last match
+                    scraped_at_data = json.loads(matches[-1])
+                    scraped_at = scraped_at_data.get('latest_scraped_at')
+                except json.JSONDecodeError:
+                    pass
+
+        # Return the timestamp or None if not found
+        return {"latest_scraped_at": scraped_at} if scraped_at else {}
+
+    extract_timestamp = extract_scraped_at_from_logs()
+
+    # Pass the scraped_at parameter to the enrichment DAG
     trigger_enrichment_dag = TriggerDagRunOperator(
         task_id="trigger_finnhub_enrichment_dag",
         trigger_dag_id="finnhub_enrichment_dag",
+        conf={
+            "latest_scraped_at": "{{ task_instance.xcom_pull(task_ids='extract_scraped_at_from_logs')['latest_scraped_at'] }}"},
         wait_for_completion=False,
         deferrable=False,
     )
 
-    run_spark_processor >> trigger_enrichment_dag
+    run_spark_processor >> extract_timestamp >> trigger_enrichment_dag
 
 finnhub_processing_dag_instance = finnhub_processing_dag()

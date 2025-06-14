@@ -30,14 +30,25 @@ with DAG(
     This DAG orchestrates the Spark-based enrichment process for Finnhub articles.
     It is designed to run after the main Finnhub processing DAG (which prepares the
     silver Iceberg table `catalog.finnhub_articles`).
+    
+    Parameters:
+    * `latest_scraped_at` - Optional ISO timestamp to filter data in the silver layer
     """,
 ) as dag:
+    # Get latest_scraped_at from the upstream DAG or default to None
+    latest_scraped_at = "{{ dag_run.conf.get('latest_scraped_at', '') }}"
+
+    # Build command array with the filter if available
+    command = []
+    if "{{ dag_run.conf.get('latest_scraped_at', '') }}" != "":
+        command.extend(["--filter-scraped-at", "{{ dag_run.conf.get('latest_scraped_at', '') }}"])
+
     run_enrichment_pipeline = DockerOperator(
         task_id="run_finnhub_enrichment_spark_job",
         image=DOCKER_IMAGE_NAME,
         api_version="auto",
         auto_remove="success", # Keeps container on failure for debugging
-        command=[], # Uses Docker image's ENTRYPOINT
+        command=command,  # Pass the scraped_at filter if available
         docker_url="unix://var/run/docker.sock", # Standard for local Docker setups
         network_mode=DOCKER_NETWORK_MODE,
         environment={
