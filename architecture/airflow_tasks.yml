@@ -71,3 +71,28 @@ services:
     image: finnhub-data-processor
     depends_on:
       - minio
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Analytics Pipelines
+  # ──────────────────────────────────────────────────────────────────────
+  finnhub-analytics-pipeline:
+    image: finnhub-analytics-pipeline
+    build:
+      context: ..
+      dockerfile: bdm/analytics/finnhub/Dockerfile
+    container_name: finnhub-analytics-pipeline
+    command: [ "--help" ]
+    environment:
+      # PostgreSQL Connection Details for the Spark Application
+      POSTGRES_HOST: postgres # Service name of the postgres container in this docker-compose
+      POSTGRES_PORT: "5432" # Ensure it's a string if any component is sensitive
+      POSTGRES_ANALYTICS_DB: ${POSTGRES_ANALYTICS_DB:-analytics_db}
+      POSTGRES_ANALYTICS_USER: ${POSTGRES_ANALYTICS_USER:-analytics_user}
+      POSTGRES_ANALYTICS_PASSWORD: ${POSTGRES_ANALYTICS_PASSWORD:-analytics_password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      iceberg-init-runner:
+        condition: service_completed_successfully
