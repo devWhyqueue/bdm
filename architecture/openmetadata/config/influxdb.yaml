@@ -1,0 +1,31 @@
+source:
+  type: influxdb
+  serviceName: local_influxdb
+  serviceConnection:
+    config:
+      type: InfluxDB
+      url: http://influxdb:8086
+      token: admintoken
+      org: bdm
+      # bucket: "exploitation_zone_streaming_data" # Optional: Specify bucket if only one, or leave for discovery
+      # Add any other specific connection configs if needed
+  sourceConfig:
+    config:
+      # bucketFilterPattern:
+      #   includes: ["exploitation_zone_streaming_data"] # Or other buckets
+      # measurementFilterPattern:
+      #   includes: ["*"]
+      markAllDeletedMeasurements: true # If applicable for InfluxDB connector
+      # enableDataProfiler: true
+      # generateSampleData: true
+
+processor:
+  type: "orm-metadata-processor"
+  config: {}
+sink:
+  type: "metadata-rest"
+  config: {}
+metadataServer:
+  config:
+    apiEndpoint: http://openmetadata-server:8581/api
+    authProvider: no-auth

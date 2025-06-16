@@ -1,0 +1,37 @@
+version: '3.8'
+services:
+  openmetadata-server:
+    image: openmetadata/openmetadata-server:latest
+    container_name: openmetadata_server
+    environment:
+      - AIRFLOW_HOST=http://localhost:8080
+      - AIRFLOW_USERNAME=admin
+      - AIRFLOW_PASSWORD=admin
+    ports:
+      - "8581:8581" # API
+    networks:
+      - local_network
+
+  openmetadata-ingestion:
+    image: openmetadata/openmetadata-ingestion:latest
+    container_name: openmetadata_ingestion
+    volumes:
+      - ./openmetadata/config:/etc/openmetadata/config
+    depends_on:
+      - openmetadata-server
+    networks:
+      - local_network
+
+  openmetadata-ui:
+    image: openmetadata/openmetadata-ui:latest
+    container_name: openmetadata_ui
+    ports:
+      - "8585:8585" # UI
+    depends_on:
+      - openmetadata-server
+    networks:
+      - local_network
+
+networks:
+  local_network:
+    driver: bridge

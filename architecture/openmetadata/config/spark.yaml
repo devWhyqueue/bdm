@@ -1,0 +1,72 @@
+source:
+  type: spark
+  serviceName: local_spark
+  serviceConnection:
+    config:
+      type: Spark
+      # Assuming spark-submit is used and jobs are identifiable.
+      # For a more robust setup, Spark History Server or a lineage agent would be better.
+      # We'll rely on metadata extraction from query logs if available,
+      # or manual lineage if direct parsing isn't supported without history server.
+
+# Configuration for Iceberg metadata via the DatabaseService connector
+---
+source:
+  type: databaseService
+  serviceName: local_iceberg
+  serviceConnection:
+    config:
+      type: Iceberg
+      catalog:
+        type: Hadoop
+        config:
+          warehouse: s3a://trusted-zone/iceberg_catalog
+      storageConfig:
+        type: S3 # or GCS, ADLS
+        awsRegion: us-east-1 # Dummy region, S3 compatible doesn't enforce this
+        awsAccessKeyId: minioadmin
+        awsSecretAccessKey: minioadmin
+        awsSessionToken: null # Optional
+        endpointURL: http://minio:9000
+        securityToken: null # Optional
+        assumeRoleArn: null # Optional
+        assumeRoleSessionName: null # Optional
+        assumeRoleSessionDuration: null # Optional
+  sourceConfig:
+    config:
+      # schemaFilterPattern:
+      #   includes: ["iceberg_catalog.*"] # Adjust if needed
+      # tableFilterPattern:
+      #   includes: ["*"]
+      markAllDeletedTables: true
+      includeTables: true
+      includeViews: true
+      # We will rely on dbt for lineage for now, if Spark lineage is not picked up automatically
+      # enableDataProfiler: true
+      # generateSampleData: true
+
+# For Spark jobs, we can also add lineage information by pointing to the source code
+# This is a more manual way if automated lineage isn't picked up.
+# Example for one job (repeat for others if needed):
+# ---
+# source:
+#   type: metadata
+#   serviceName: spark_job_lineage_example
+#   sourceConfig:
+#     config:
+#       # This section is highly dependent on how OpenMetadata parses lineage.
+#       # It might require manual setup in the UI if YAML-based lineage for Spark jobs is complex.
+#       # For now, we focus on getting the Iceberg tables ingested.
+#       # Lineage for Spark jobs might be better handled by observing queries against Iceberg tables.
+#       # And by connecting OpenMetadata to Airflow if it's orchestrating these Spark jobs.
+
+# processor:
+#   type: "orm-metadata-processor"
+#   config: {}
+# sink:
+#   type: "metadata-rest"
+#   config: {}
+# metadataServer:
+#   config:
+#     apiEndpoint: http://openmetadata-server:8581/api
+#     authProvider: no-auth

@@ -1,0 +1,48 @@
+# Kafka Metadata Ingestion
+source:
+  type: kafka
+  serviceName: local_kafka
+  serviceConnection:
+    config:
+      type: Kafka
+      bootstrapServers: "kafka:9092"
+      # schemaRegistryURL: "http://schema-registry:8081" # Add if a schema registry is used
+      # consumerConfig: {} # Additional consumer configs if needed
+      # schemaRegistryConfig: {} # Additional schema registry configs if needed
+  sourceConfig:
+    config:
+      # topicFilterPattern:
+      #   includes: ["*"] # Ingest all topics, or specify patterns
+      markAllDeletedTopics: true
+      # enableDataProfiler: true # Optional
+      # generateSampleData: true # Optional
+
+# Flink Metadata Ingestion
+---
+source:
+  type: flink
+  serviceName: local_flink
+  serviceConnection:
+    config:
+      type: Flink
+      jobManagerURL: "http://jobmanager:8081"
+      # Add authentication if Flink JobManager requires it
+  sourceConfig:
+    config:
+      includeJobs: true
+      # jobFilterPattern:
+      #   includes: ["*"] # Ingest all jobs, or specify patterns
+      # includeTasks: true # Set to true if task level details are needed
+      # markAllDeletedJobs: true
+
+# Common processor, sink, and metadata server config
+processor:
+  type: "orm-metadata-processor"
+  config: {}
+sink:
+  type: "metadata-rest"
+  config: {}
+metadataServer:
+  config:
+    apiEndpoint: http://openmetadata-server:8581/api
+    authProvider: no-auth

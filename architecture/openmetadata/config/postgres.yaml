@@ -1,0 +1,35 @@
+source:
+  type: postgres
+  serviceName: local_postgres
+  serviceConnection:
+    config:
+      type: Postgres
+      username: analytics_user
+      password: analytics_password
+      hostPort: postgres:5432
+      database: analytics_db
+      # sslMode: "disable" # Add if SSL is configured; for local, often disabled
+      # connectionOptions: {}
+      # connectionArguments: {}
+  sourceConfig:
+    config:
+      # schemaFilterPattern:
+      #   includes: ["public"] # Or other schemas to include
+      # tableFilterPattern:
+      #   includes: ["*"]
+      markAllDeletedTables: true
+      includeTables: true
+      includeViews: true
+      # enableDataProfiler: true
+      # generateSampleData: true
+
+processor:
+  type: "orm-metadata-processor"
+  config: {}
+sink:
+  type: "metadata-rest"
+  config: {}
+metadataServer:
+  config:
+    apiEndpoint: http://openmetadata-server:8581/api
+    authProvider: no-auth
