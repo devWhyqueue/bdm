@@ -1,37 +1,108 @@
-version: '3.8'
 services:
-  openmetadata-server:
-    image: openmetadata/openmetadata-server:latest
-    container_name: openmetadata_server
+  # ────────────────────────────────────────────────────────────────────
+  # Search engine
+  # ────────────────────────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.4
+    container_name: openmetadata_elasticsearch
+    restart: always
     environment:
-      - AIRFLOW_HOST=http://localhost:8080
-      - AIRFLOW_USERNAME=admin
-      - AIRFLOW_PASSWORD=admin
-    ports:
-      - "8581:8581" # API
-    networks:
-      - local_network
-
-  openmetadata-ingestion:
-    image: openmetadata/openmetadata-ingestion:latest
-    container_name: openmetadata_ingestion
+      discovery.type: single-node
+      ES_JAVA_OPTS: -Xms1024m -Xmx1024m
+      xpack.security.enabled: "false"
     volumes:
-      - ./openmetadata/config:/etc/openmetadata/config
-    depends_on:
-      - openmetadata-server
-    networks:
-      - local_network
+      - es-data:/usr/share/elasticsearch/data            # declared in root compose
+    ports: # expose only if you want host access
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
 
-  openmetadata-ui:
-    image: openmetadata/openmetadata-ui:latest
-    container_name: openmetadata_ui
+  # ────────────────────────────────────────────────────────────────────
+  # One-off schema migration (runs once, then exits)
+  # ────────────────────────────────────────────────────────────────────
+  openmetadata-migrate:
+    image: docker.getcollate.io/openmetadata/server:1.7.3
+    container_name: openmetadata_migrate
+    command: "./bootstrap/openmetadata-ops.sh migrate"
+    restart: "no"
+    environment:
+      # --- database ---------------------------------------------------
+      DB_DRIVER_CLASS: org.postgresql.Driver
+      DB_SCHEME: postgresql
+      DB_HOST: postgres                         # existing service name
+      DB_PORT: 5432
+      DB_USER: openmetadata_user
+      DB_USER_PASSWORD: openmetadata_password
+      OM_DATABASE: openmetadata_db
+      # --- search -----------------------------------------------------
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # ────────────────────────────────────────────────────────────────────
+  # Main OpenMetadata server
+  # ────────────────────────────────────────────────────────────────────
+  openmetadata-server:
+    image: docker.getcollate.io/openmetadata/server:1.7.3
+    container_name: openmetadata_server
+    restart: always
     ports:
-      - "8585:8585" # UI
+      - "8585:8585"        # UI / API
+      - "8586:8586"        # admin / health
+    environment:
+      # --- database ---------------------------------------------------
+      DB_DRIVER_CLASS: org.postgresql.Driver
+      DB_SCHEME: postgresql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: openmetadata_user
+      DB_USER_PASSWORD: openmetadata_password
+      OM_DATABASE: openmetadata_db
+      # --- search -----------------------------------------------------
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+      # --- integration with your existing Airflow ---------------------
+      #pipelineServiceClientConfiguration
+      PIPELINE_SERVICE_CLIENT_ENDPOINT: http://nginx:80/airflow
+      PIPELINE_SERVICE_CLIENT_HEALTH_CHECK_INTERVAL: ${PIPELINE_SERVICE_CLIENT_HEALTH_CHECK_INTERVAL:-300}
+      PIPELINE_SERVICE_CLIENT_ENABLED: ${PIPELINE_SERVICE_CLIENT_ENABLED:-true}
+      PIPELINE_SERVICE_CLIENT_CLASS_NAME: ${PIPELINE_SERVICE_CLIENT_CLASS_NAME:-"org.openmetadata.service.clients.pipeline.airflow.AirflowRESTClient"}
+      PIPELINE_SERVICE_IP_INFO_ENABLED: ${PIPELINE_SERVICE_IP_INFO_ENABLED:-false}
+      PIPELINE_SERVICE_CLIENT_HOST_IP: ${PIPELINE_SERVICE_CLIENT_HOST_IP:-""}
+      PIPELINE_SERVICE_CLIENT_SECRETS_MANAGER_LOADER: ${PIPELINE_SERVICE_CLIENT_SECRETS_MANAGER_LOADER:-"noop"}
+      PIPELINE_SERVICE_CLIENT_VERIFY_SSL: ${PIPELINE_SERVICE_CLIENT_VERIFY_SSL:-"no-ssl"}
+      PIPELINE_SERVICE_CLIENT_SSL_CERT_PATH: ${PIPELINE_SERVICE_CLIENT_SSL_CERT_PATH:-""}
+      SERVER_HOST_API_URL: ${SERVER_HOST_API_URL:-http://openmetadata-server:8585/api}
+      #airflow parameters
+      AIRFLOW_USERNAME: ${AIRFLOW_USERNAME:-airflow}
+      AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD:-airflow}
+      AIRFLOW_TIMEOUT: ${AIRFLOW_TIMEOUT:-10}
+      AIRFLOW_TRUST_STORE_PATH: ${AIRFLOW_TRUST_STORE_PATH:-""}
+      AIRFLOW_TRUST_STORE_PASSWORD: ${AIRFLOW_TRUST_STORE_PASSWORD:-""}
+      FERNET_KEY: ${FERNET_KEY:-jJ/9sz0g0OHxsfxOoSfdFdmk3ysNmPRnH3TUAbz3IHA=}
     depends_on:
-      - openmetadata-server
-    networks:
-      - local_network
+      elasticsearch:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      openmetadata-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8586/healthcheck" ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
 
-networks:
-  local_network:
-    driver: bridge
+# ──────────────────────────────────────────────────────────────────────
+# Local data volume for Elasticsearch
+# ──────────────────────────────────────────────────────────────────────
+volumes:
+  es-data:

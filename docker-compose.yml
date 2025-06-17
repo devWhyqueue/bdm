@@ -59,7 +59,7 @@ services:
   # ----------------------------------------------------------------------
   airflow-webserver:
     extends:
-      file: architecture/airflow.yml
+      file: architecture/airflow/airflow.yml
       service: airflow-webserver
     depends_on:
       <<: *airflow-common-depends-on
@@ -70,7 +70,7 @@ services:
 
   airflow-scheduler:
     extends:
-      file: architecture/airflow.yml
+      file: architecture/airflow/airflow.yml
       service: airflow-scheduler
     depends_on:
       <<: *airflow-common-depends-on
@@ -81,21 +81,21 @@ services:
 
   airflow-init-db:
     extends:
-      file: architecture/airflow.yml
+      file: architecture/airflow/airflow.yml
       service: airflow-init-db
     depends_on:
       <<: *airflow-init-depends-on
 
   airflow-init-packages:
     extends:
-      file: architecture/airflow.yml
+      file: architecture/airflow/airflow.yml
       service: airflow-init-packages
     depends_on:
       <<: *airflow-init-depends-on
 
   airflow-worker:
     extends:
-      file: architecture/airflow.yml
+      file: architecture/airflow/airflow.yml
       service: airflow-worker
     depends_on:
       <<: *airflow-common-depends-on
@@ -109,37 +109,37 @@ services:
   # ----------------------------------------------------------------------
   finazon_stream_ingestion:
     extends:
-      file: ./architecture/airflow_tasks.yml
+      file: architecture/airflow/airflow_tasks.yml
       service: finazon_stream_ingestion
 
   finazon-stream-processor:
     extends:
-      file: ./architecture/airflow_tasks.yml
+      file: architecture/airflow/airflow_tasks.yml
       service: finazon-stream-processor
 
   reddit_bitcoin_ingestion:
     extends:
-      file: ./architecture/airflow_tasks.yml
+      file: architecture/airflow/airflow_tasks.yml
       service: reddit_bitcoin_ingestion
 
   finnhub_bitcoin_news:
     extends:
-      file: ./architecture/airflow_tasks.yml
+      file: architecture/airflow/airflow_tasks.yml
       service: finnhub_bitcoin_news
 
   reddit_data_processor:
     extends:
-      file: ./architecture/airflow_tasks.yml
+      file: architecture/airflow/airflow_tasks.yml
       service: reddit_data_processor
 
   finnhub_data_processor:
     extends:
-      file: ./architecture/airflow_tasks.yml
+      file: architecture/airflow/airflow_tasks.yml
       service: finnhub_data_processor
 
   finnhub-analytics-pipeline:
     extends:
-      file: ./architecture/airflow_tasks.yml
+      file: architecture/airflow/airflow_tasks.yml
       service: finnhub-analytics-pipeline
 
   # ----------------------------------------------------------------------
@@ -230,6 +230,30 @@ services:
       - ./architecture/grafana/provisioning:/etc/grafana/provisioning
       - ./architecture/grafana/dashboards:/var/lib/grafana/dashboards
 
+  # -------------------------------------------------------------------
+  # OpenMetadata services (imported from architecture/openmetadata.yml)
+  # -------------------------------------------------------------------
+  elasticsearch:
+    extends:
+      file: ./architecture/openmetadata.yml
+      service: elasticsearch
+
+  openmetadata-migrate:
+    extends:
+      file: ./architecture/openmetadata.yml
+      service: openmetadata-migrate
+
+  openmetadata-server:
+    extends:
+      file: ./architecture/openmetadata.yml
+      service: openmetadata-server
+    depends_on:
+      openmetadata-migrate:
+        condition: service_completed_successfully
+      # optional: keep the Nginx reverse-proxy dependency if you expose it
+      # nginx:
+      #   condition: service_started
+
 volumes:
   postgres-db-volume:
   mongo-data:
@@ -237,3 +261,4 @@ volumes:
   flink-checkpoints:
   flink-usrlib:
   influxdb-data:
+  es-data:

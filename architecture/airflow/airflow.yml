@@ -10,7 +10,6 @@ x-airflow-environment: &airflow-common-env
   AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
   AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
   AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-  _PIP_ADDITIONAL_REQUIREMENTS: apache-airflow-providers-apache-kafka apache-airflow-providers-amazon apache-airflow-providers-docker
   # Connections
   AIRFLOW_CONN_KAFKA_DEFAULT: 'kafka://kafka:9092'
   AIRFLOW_CONN_S3: 'aws://minioadmin:minioadmin@?host=http%3A%2F%2Fminio%3A9000'
@@ -36,13 +35,14 @@ x-airflow-scheduler-healthcheck: &airflow-scheduler-healthcheck
 
 # A base definition to be extended by all Airflow services
 x-airflow-common: &airflow-common
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.10.5}
+  image: bdm/airflow:latest
   user: "50000:0"
   environment:
     <<: *airflow-common-env
   volumes:
-    - ../bdm/airflow:/opt/airflow/dags
+    - ../../bdm/airflow:/opt/airflow/dags
     - ./.airflow/logs:/opt/airflow/logs
+    - ./.airflow/dag_generated_configs:/opt/airflow/dag_generated_configs
     - ./.airflow/config:/opt/airflow/config
     - ./.airflow/plugins:/opt/airflow/plugins
     - /var/run/docker.sock:/var/run/docker.sock

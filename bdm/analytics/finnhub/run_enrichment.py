@@ -184,10 +184,13 @@ def run_spark_job(spark: SparkSession, filter_scraped_at: Optional[str] = None) 
 
 # ─────────────────── Main ────────────────────
 if __name__ == "__main__":
-    log.info("Starting Finnhub Spark Job (Spark NLP 6 – T5)…")
+    log.info("Starting Finnhub Spark Job (Spark NLP 6 – T5)…")
 
     try:
-        spark = create_spark_session(app_name="FinnhubAnalyticsEnrichmentSparkNLP6T5") or sparknlp.start()
+        spark = create_spark_session(
+            app_name="FinnhubAnalyticsEnrichmentSparkNLP6T5",
+            packages=["com.johnsnowlabs.nlp:spark-nlp_2.12:6.0.3"]
+        ) or sparknlp.start()
         args = _parse_args()
         run_spark_job(spark, args.filter_scraped_at)
         log.info("Job completed successfully.")
